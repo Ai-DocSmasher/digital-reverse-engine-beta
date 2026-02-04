@@ -1,0 +1,1 @@
+import numpy as npdef process_audio():    print("Pipeline placeholder — ready for DSP integration.")if __name__ == "__main__":    process_audio()
