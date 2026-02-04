@@ -1,0 +1,1 @@
+{  "required_fields": [    "contribution_type",    "complexity_factor",    "transient_density",    "quality_proxy_score"  ]}
