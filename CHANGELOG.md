@@ -1,212 +1,66 @@
-Digital Reverse Engine™ — Changelog
+v1.1.0 — Tempo‑Aware GUI Upgrade
 
+This release introduces major improvements to the Digital Reverse Engine GUI.
 
 
-v1.0.0
 
+New Features
 
+Automatic Tempo Detection  
 
-Desktop GUI (PyQt6) Added
+When the tempo field is left blank, the GUI analyzes the audio and fills in a detected BPM.
 
-Added gui.py, a standalone desktop interface for creators
+Falls back to 120 BPM if detection fails.
 
 
 
-Supports file browsing, mode selection, tempo input, and DSP processing
+Smart Defaults for Optional Fields  
 
+Blank fields now auto‑fill with stable defaults:
 
 
-Packaged executable appears in dist/gui.exe after PyInstaller build
 
+Beats per bar → 4
 
 
-GUI and CLI both use the same deterministic TimingGrid DSP engine
 
+Bars per slice → 1
 
 
-✨ Why this addition matters
 
-You’re signaling to users:
+Tatum fraction → 0.25
 
 
 
-There’s a GUI for convenience
+Improved User Experience
 
 
 
-There’s a CLI for power users
+Hover tooltips added to every field
 
 
 
-Both are first‑class citizens
+Clear logging of auto‑detected values and defaults
 
 
 
-The EXE is easy to find
+Cleaner layout and more intuitive workflow
 
 
 
-The DSP engine is identical across both
+Stability Improvements
 
-v1.0.0 — Deterministic TimingGrid Release (Major Upgrade)
+Fixed crashes caused by empty fields
 
-This release replaces all beat‑detection and onset‑snapping logic with a fully deterministic, DAW‑accurate timing grid.
 
-The engine now produces glitch‑free, artifact‑free, sample‑accurate structural reversals.
 
+Improved error handling and logging
 
 
-New DSP Architecture
 
-Added TimingGrid (mathematical tempo grid; no detection, no drift)
+Ensured GUI always launches cleanly
 
 
 
-All modes now slice using deterministic sample positions
-
-
-
-Zero jitter, zero onset errors, zero spectral artifacts
-
-
-
-New Reverse Modes
-
-HQ\_REVERSE — Beat‑level structural reverse (flagship mode)
-
-
-
-QBEAT\_REVERSE — Quarter‑beat slicing
-
-
-
-TATUM\_REVERSE — Sub‑beat micro‑slicing (1/4 beat, triplet, 1/2 beat, etc.)
-
-
-
-STUDIO\_REVERSE — Multi‑bar phrase‑level reverse with user‑tuned slicing
-
-
-
-TRUE\_REVERSE — Classic waveform reverse
-
-
-
-STUDIO\_REVERSE Enhancements
-
-Multi‑bar slicing for long‑form audio
-
-
-
-User‑tuned behavior via tempo, beats‑per‑bar, and bar size
-
-
-
-Setting beats\_per\_bar = 1 produces macro HQ‑style reversals
-
-
-
-Guaranteed multi‑slice logic for audible reversal
-
-
-
-Pipeline Improvements
-
-Added DSP‑only pipeline for CLI
-
-
-
-Added hybrid pipeline with CostEstimator, gating, and receipts
-
-
-
-Cleaned imports and removed circular dependencies
-
-
-
-Unified mode map across DSP and hybrid layers
-
-
-
-Stability \& Quality
-
-No static, no glitches, no windowing artifacts
-
-
-
-Perfect stereo alignment
-
-
-
-Sample‑accurate padding/trim logic
-
-
-
-Faster processing due to removal of onset/beat detection
-
-
-
-Beta 3 — Structural Reverse Upgrade (Legacy)
-
-Added early HQ\_REVERSE (tempo‑grid + onset snapping)
-
-
-
-Added TRANSIENTAWARE\_REVERSE (tatum‑like slicing)
-
-
-
-Added DJ\_REVERSE (1/8‑beat slicing)
-
-
-
-Added STUDIO\_REVERSE (bar‑level structural reverse)
-
-
-
-Improved stereo‑safe windowing
-
-
-
-Improved tempo detection fallback logic
-
-
-
-Added deterministic grid slicing for stability
-
-
-
-Added onset snapping for smoother transitions
-
-
-
-Added padding/trim logic for perfect output length
-
-
-
-Beta 2 — DSP Pipeline
-
-Added granular reverse mode
-
-
-
-Added Hann window smoothing
-
-
-
-Added stereo‑safe processing
-
-
-
-Beta 1 — Initial Release
-
-TRUE\_REVERSE
-
-
-
-Basic CLI
-
-
-
-WAV I/O
+Removed stray metadata that could break PyInstaller builds
 

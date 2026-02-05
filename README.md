@@ -1,199 +1,160 @@
-Digital Reverse Engine™
-A fully offline, deterministic, tempo‑aware structural reverse processor for WAV/MP3 audio.
-Designed for clarity, musicality, and modern DSP workflows.
+Digital Reverse Engine™ — v1.1.0
 
-Unlike traditional reverse effects that flip the waveform sample‑by‑sample, this engine performs structural reversal:
+A deterministic, tempo‑aware structural reverse processor for WAV/MP3 audio.
 
-slicing audio into musically meaningful segments
-
-reversing the order of those segments
-
-preserving forward playback inside each slice
-
-using a mathematically perfect timing grid (no beat detection, no drift)
-
-producing clean, glitch‑free, DAW‑grade results
-
-The outcome is a reverse effect that feels musical, intentional, and artifact‑free — often cleaner than real‑time plugins like Gross Beat.
+Designed for AI‑music creators, producers, remixers, and sound designers who want clean, glitch‑free, DAW‑grade reverse effects without beat detection drift or artifacts.
 
 
 
-✨ Reverse Modes
+This engine uses a mathematical timing grid (patent pending) to reverse audio with perfect consistency.
+
+
+
+✨ What’s New in v1.1.0
+
+Auto‑Tempo Detection
+
+Leave the tempo field blank in the GUI and the engine will analyze the audio and fill in a detected BPM automatically.
+
+If detection fails, it safely falls back to 120 BPM.
+
+
+
+Smart Defaults for Optional Fields
+
+If any optional field is left empty, the GUI fills in stable defaults:
+
+
+
+Beats per bar → 4
+
+
+
+Bars per slice → 1
+
+
+
+Tatum fraction → 0.25
+
+
+
+Improved User Experience
+
+Hover tooltips explain every field
+
+
+
+Clear logging of auto‑detected values and defaults
+
+
+
+Cleaner layout and more intuitive workflow
+
+
+
+No crashes from empty fields
+
+
+
+🎛 Standalone GUI (Windows)
+
+A fully offline PyQt6 desktop app is included.
+
+
+
+How to Run
+
+Download gui.zip from the Releases page
+
+
+
+Extract the ZIP
+
+
+
+Double‑click gui.exe
+
+
+
+Load audio → choose mode → process
+
+
+
+No Python required.
+
+No installation.
+
+No dependencies.
+
+
+
+SmartScreen Notice
+
+Windows may warn about running an unsigned executable.
+
+Click More Info → Run Anyway to launch the GUI.
+
+
+
+🖥 CLI Usage (Optional)
+
+For power users:
+
+
+
+python dre.py input.wav --mode HQ\_REVERSE --tempo 128 --output out.wav
+
+All modes are supported:
+
 
 
 TRUE\_REVERSE
-Classic tape‑style reverse (waveform flipped).
-Pure sample‑level reversal.
 
 
 
-HQ\_REVERSE (Recommended for first‑time users)
-Beat‑level structural reverse.
-
-One slice per beat
-
-Perfectly clean and musical
-
-Requires correct tempo for best results
-
-Halving the tempo produces creative stretched reversals
-
-This mode is the flagship for predictable, DAW‑accurate reverse effects.
+HQ\_REVERSE
 
 
 
 QBEAT\_REVERSE
-Quarter‑beat slicing for rhythmic, glitch‑style reversals.
-Great for electronic, trap, and experimental textures.
+
+
 
 TATUM\_REVERSE
-Sub‑beat micro‑slicing.
-
-1/4 beat
-
-triplet
-
-1/2 beat
-
-custom fractions
-
-Produces granular‑style reversals without the harsh artifacts of granular engines.
 
 
 
 STUDIO\_REVERSE
-Multi‑bar phrase‑level reverse.
 
-Slices audio into N‑bar chunks
 
-Reverses the order of phrases
 
-Works best on longer audio (30s–2min)
+🎧 Perfect For
 
-Highly expressive when adjusting tempo, beats‑per‑bar, or bar size
+AI music creators (Suno, Udio, Stable Audio, etc.)
 
-Setting beats\_per\_bar = 1 makes it behave like a macro HQ\_REVERSE
 
-This mode is ideal for arrangement‑style transformations and cinematic reversals.
 
+Producers \& remixers
 
 
-🎧 Recommended Workflow
 
-1. Start with HQ\_REVERSE
-   Attach the correct tempo for perfect, glitch‑free results.
-2. Experiment with tempo
-   Halving or doubling the tempo produces creative structural variations.
-3. Explore STUDIO\_REVERSE on long tracks
-   Phrase‑level slicing becomes expressive on full songs or long loops.
-4. Adjust beats‑per‑bar
-   Setting beats\_per\_bar = 1 turns STUDIO\_REVERSE into a beat‑level slicer.
-5. Use TATUM\_REVERSE for micro‑textures
-   Great for sound design and glitch effects.
+DJs \& sound designers
 
 
 
-🚀 Usage
+Anyone who wants clean, musical reverse effects
 
 
 
-python dre.py input.wav --mode HQ\_REVERSE --tempo 128 --output out.wav
-Examples:
+🧠 Patent Pending
 
+The deterministic structural reversal method implemented in this engine is patent pending.
 
 
-python dre.py track.wav --mode STUDIO\_REVERSE --tempo 179 --output bars.wav
-python dre.py loop.wav --mode QBEAT\_REVERSE --tempo 140 --output qbeat.wav
-python dre.py pad.wav --mode TATUM\_REVERSE --tempo 120 --tatum-fraction 0.25 --output micro.wav
-python dre.py fx.wav --mode TRUE\_REVERSE --output classic.wav
 
+📣 Feedback Welcome
 
+This is an active public beta.
 
-📦 Installation
-
-
-
-pip install -r requirements.txt
-
-
-Dependencies:
-
-numpy
-
-soundfile
-
-librosa (loader only; timing grid is fully deterministic)
-
-
-
-🧠 How It Works
-
-
-The engine uses a deterministic TimingGrid:
-
-No beat detection
-
-No onset detection
-
-No spectral analysis
-
-No drift or jitter
-
-100% offline, sample‑accurate slicing
-
-Every slice is computed from:
-
-tempo
-
-beats per bar
-
-subdivisions
-
-bar count
-
-This produces DAW‑grade structural reversals with zero artifacts.
-
-
-
-📦 Running the Desktop App (GUI)
-
-
-
-After building with PyInstaller, the standalone executable will appear in:
-
-
-
-dist/gui.exe (located in dist/gui.zip)
-
-You can launch the Digital Reverse Engine™ GUI by double‑clicking the file.
-
-No command‑line usage is required for the GUI.
-
-
-
-\[NB ⚠ Windows SmartScreen Notice
-
-The GUI executable is unsigned and may trigger a Windows Defender warning.
-
-This is normal for new open-source tools. Click “More Info” → “Run Anyway”
-
-to launch the Digital Reverse Engine GUI.]
-
-
-
-
-
-🖥 Running from CLI (Optional)
-
-The engine can still be used directly from the command line:
-
-
-
-
-
-python dre.py input.wav --mode HQ\_REVERSE --tempo 128 --output out.wav
-
-
-
-Both the GUI and CLI use the same deterministic DSP engine.
+Share your reversed audio, ideas, and issues in the GitHub Discussions or Issues tab.
 
