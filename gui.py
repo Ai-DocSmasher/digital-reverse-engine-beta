@@ -9,12 +9,15 @@ from PyQt6.QtCore import Qt
 
 from core.hybrid.pipeline import process_audio
 
+from PyQt6.QtGui import QIcon
 
 class ReverseGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Digital Reverse Engine™ — GUI Beta")
+        self.setWindowIcon(QIcon("assets/icon.ico"))
         self.setMinimumWidth(600)
+
 
         layout = QGridLayout()
 

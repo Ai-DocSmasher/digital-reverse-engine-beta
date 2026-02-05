@@ -163,11 +163,23 @@ After building with PyInstaller, the standalone executable will appear in:
 
 
 
-dist/gui.exe
+dist/gui.exe (located in dist/gui.zip)
 
 You can launch the Digital Reverse Engine™ GUI by double‑clicking the file.
 
 No command‑line usage is required for the GUI.
+
+
+
+\[NB ⚠ Windows SmartScreen Notice
+
+The GUI executable is unsigned and may trigger a Windows Defender warning.
+
+This is normal for new open-source tools. Click “More Info” → “Run Anyway”
+
+to launch the Digital Reverse Engine GUI.]
+
+
 
 
 
