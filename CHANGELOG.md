@@ -1,164 +1,212 @@
-###### Digital Reverse Engine™ — Changelog
+Digital Reverse Engine™ — Changelog
 
-###### v1.0.0 — Deterministic TimingGrid Release (Major Upgrade)
 
-###### This release replaces all beat‑detection and onset‑snapping logic with a fully deterministic, DAW‑accurate timing grid.
 
-###### The engine now produces glitch‑free, artifact‑free, sample‑accurate structural reversals.
+v1.0.0
 
-###### 
 
-###### New DSP Architecture
 
-###### Added TimingGrid (mathematical tempo grid; no detection, no drift)
+Desktop GUI (PyQt6) Added
 
-###### 
+Added gui.py, a standalone desktop interface for creators
 
-###### All modes now slice using deterministic sample positions
 
-###### 
 
-###### Zero jitter, zero onset errors, zero spectral artifacts
+Supports file browsing, mode selection, tempo input, and DSP processing
 
-###### 
 
-###### New Reverse Modes
 
-###### HQ\_REVERSE — Beat‑level structural reverse (flagship mode)
+Packaged executable appears in dist/gui.exe after PyInstaller build
 
-###### 
 
-###### QBEAT\_REVERSE — Quarter‑beat slicing
 
-###### 
+GUI and CLI both use the same deterministic TimingGrid DSP engine
 
-###### TATUM\_REVERSE — Sub‑beat micro‑slicing (1/4 beat, triplet, 1/2 beat, etc.)
 
-###### 
 
-###### STUDIO\_REVERSE — Multi‑bar phrase‑level reverse with user‑tuned slicing
+✨ Why this addition matters
 
-###### 
+You’re signaling to users:
 
-###### TRUE\_REVERSE — Classic waveform reverse
 
-###### 
 
-###### STUDIO\_REVERSE Enhancements
+There’s a GUI for convenience
 
-###### Multi‑bar slicing for long‑form audio
 
-###### 
 
-###### User‑tuned behavior via tempo, beats‑per‑bar, and bar size
+There’s a CLI for power users
 
-###### 
 
-###### Setting beats\_per\_bar = 1 produces macro HQ‑style reversals
 
-###### 
+Both are first‑class citizens
 
-###### Guaranteed multi‑slice logic for audible reversal
 
-###### 
 
-###### Pipeline Improvements
+The EXE is easy to find
 
-###### Added DSP‑only pipeline for CLI
 
-###### 
 
-###### Added hybrid pipeline with CostEstimator, gating, and receipts
+The DSP engine is identical across both
 
-###### 
+v1.0.0 — Deterministic TimingGrid Release (Major Upgrade)
 
-###### Cleaned imports and removed circular dependencies
+This release replaces all beat‑detection and onset‑snapping logic with a fully deterministic, DAW‑accurate timing grid.
 
-###### 
+The engine now produces glitch‑free, artifact‑free, sample‑accurate structural reversals.
 
-###### Unified mode map across DSP and hybrid layers
 
-###### 
 
-###### Stability \& Quality
+New DSP Architecture
 
-###### No static, no glitches, no windowing artifacts
+Added TimingGrid (mathematical tempo grid; no detection, no drift)
 
-###### 
 
-###### Perfect stereo alignment
 
-###### 
+All modes now slice using deterministic sample positions
 
-###### Sample‑accurate padding/trim logic
 
-###### 
 
-###### Faster processing due to removal of onset/beat detection
+Zero jitter, zero onset errors, zero spectral artifacts
 
-###### 
 
-###### Beta 3 — Structural Reverse Upgrade (Legacy)
 
-###### Added early HQ\_REVERSE (tempo‑grid + onset snapping)
+New Reverse Modes
 
-###### 
+HQ\_REVERSE — Beat‑level structural reverse (flagship mode)
 
-###### Added TRANSIENTAWARE\_REVERSE (tatum‑like slicing)
 
-###### 
 
-###### Added DJ\_REVERSE (1/8‑beat slicing)
+QBEAT\_REVERSE — Quarter‑beat slicing
 
-###### 
 
-###### Added STUDIO\_REVERSE (bar‑level structural reverse)
 
-###### 
+TATUM\_REVERSE — Sub‑beat micro‑slicing (1/4 beat, triplet, 1/2 beat, etc.)
 
-###### Improved stereo‑safe windowing
 
-###### 
 
-###### Improved tempo detection fallback logic
+STUDIO\_REVERSE — Multi‑bar phrase‑level reverse with user‑tuned slicing
 
-###### 
 
-###### Added deterministic grid slicing for stability
 
-###### 
+TRUE\_REVERSE — Classic waveform reverse
 
-###### Added onset snapping for smoother transitions
 
-###### 
 
-###### Added padding/trim logic for perfect output length
+STUDIO\_REVERSE Enhancements
 
-###### 
+Multi‑bar slicing for long‑form audio
 
-###### Beta 2 — DSP Pipeline
 
-###### Added granular reverse mode
 
-###### 
+User‑tuned behavior via tempo, beats‑per‑bar, and bar size
 
-###### Added Hann window smoothing
 
-###### 
 
-###### Added stereo‑safe processing
+Setting beats\_per\_bar = 1 produces macro HQ‑style reversals
 
-###### 
 
-###### Beta 1 — Initial Release
 
-###### TRUE\_REVERSE
+Guaranteed multi‑slice logic for audible reversal
 
-###### 
 
-###### Basic CLI
 
-###### 
+Pipeline Improvements
 
-###### WAV I/O
+Added DSP‑only pipeline for CLI
+
+
+
+Added hybrid pipeline with CostEstimator, gating, and receipts
+
+
+
+Cleaned imports and removed circular dependencies
+
+
+
+Unified mode map across DSP and hybrid layers
+
+
+
+Stability \& Quality
+
+No static, no glitches, no windowing artifacts
+
+
+
+Perfect stereo alignment
+
+
+
+Sample‑accurate padding/trim logic
+
+
+
+Faster processing due to removal of onset/beat detection
+
+
+
+Beta 3 — Structural Reverse Upgrade (Legacy)
+
+Added early HQ\_REVERSE (tempo‑grid + onset snapping)
+
+
+
+Added TRANSIENTAWARE\_REVERSE (tatum‑like slicing)
+
+
+
+Added DJ\_REVERSE (1/8‑beat slicing)
+
+
+
+Added STUDIO\_REVERSE (bar‑level structural reverse)
+
+
+
+Improved stereo‑safe windowing
+
+
+
+Improved tempo detection fallback logic
+
+
+
+Added deterministic grid slicing for stability
+
+
+
+Added onset snapping for smoother transitions
+
+
+
+Added padding/trim logic for perfect output length
+
+
+
+Beta 2 — DSP Pipeline
+
+Added granular reverse mode
+
+
+
+Added Hann window smoothing
+
+
+
+Added stereo‑safe processing
+
+
+
+Beta 1 — Initial Release
+
+TRUE\_REVERSE
+
+
+
+Basic CLI
+
+
+
+WAV I/O
 
