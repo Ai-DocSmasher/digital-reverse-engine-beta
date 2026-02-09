@@ -1,0 +1,13 @@
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Executables
+*.exe
+*.pkg
+*.dll
+
+# Python
+__pycache__/
+*.pyc
