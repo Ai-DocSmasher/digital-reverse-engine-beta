@@ -1,66 +1,40 @@
-v1.1.0 — Tempo‑Aware GUI Upgrade
+# Changelog — Digital Reverse Engine™ Player Edition
 
-This release introduces major improvements to the Digital Reverse Engine GUI.
+All notable changes to this project will be documented here.
 
+---
 
+## [1.2.0] — 2026-02-09
+### Added
+- New **sounddevice-based click metronome** (no external dependencies)
+- **Train-car sweep indicator** for improved high-BPM readability
+- **System Log panel** for debugging and user feedback
+- Improved **Tap Tempo estimator** (multi-tap averaging)
+- Restart now fully restores original audio buffer and UI state
 
-New Features
+### Improved
+- Sweep indicator adaptive scaling for BPM > 90
+- Cleaner GUI layout and dark theme consistency
+- Playback engine stability and safe callback handling
 
-Automatic Tempo Detection  
+### Fixed
+- Removed redundant code blocks from earlier versions
+- Eliminated simpleaudio dependency (Python 3.13 incompatible)
+- Corrected indentation and structural issues in GUI class
 
-When the tempo field is left blank, the GUI analyzes the audio and fills in a detected BPM.
+---
 
-Falls back to 120 BPM if detection fails.
+## [1.1.0] — 2026-02-04
+### Added
+- First public GUI release
+- Waveform viewer
+- Reverse modes (True, HQ, Tatum, Studio)
+- Tempo detection via librosa
+- Tap Tempo (initial version)
+- Playback engine with safe stop
 
+---
 
-
-Smart Defaults for Optional Fields  
-
-Blank fields now auto‑fill with stable defaults:
-
-
-
-Beats per bar → 4
-
-
-
-Bars per slice → 1
-
-
-
-Tatum fraction → 0.25
-
-
-
-Improved User Experience
-
-
-
-Hover tooltips added to every field
-
-
-
-Clear logging of auto‑detected values and defaults
-
-
-
-Cleaner layout and more intuitive workflow
-
-
-
-Stability Improvements
-
-Fixed crashes caused by empty fields
-
-
-
-Improved error handling and logging
-
-
-
-Ensured GUI always launches cleanly
-
-
-
-Removed stray metadata that could break PyInstaller builds
-
+## [1.0.0] — 2026-02-01
+### Added
+- Initial CLI-only release
