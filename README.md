@@ -15,12 +15,12 @@ The v1.3.0 update marks the transition from a CLI-first utility to a fully-fledg
 
  🎛 Reverse Modes
 
- Mode           Best For        Description 
+
                              
- TRUE REVERSE   Standard FX     Classic sample-flipping for traditional reverse sounds. 
- HQ REVERSE     Vocals / Leads  High-fidelity structural reversal with optimized transients. 
- TATUM REVERSE  Percussion      Micro-structural flips based on the smallest rhythmic units. 
- STUDIO MODE    Full Tracks     The ultimate structural engine for flipping entire 4-bar or 8-bar phrases. 
+-TRUE REVERSE   Standard FX     Classic sample-flipping for traditional reverse sounds. 
+-HQ REVERSE     Vocals / Leads  High-fidelity structural reversal with optimized transients. 
+-TATUM REVERSE  Percussion      Micro-structural flips based on the smallest rhythmic units. 
+-STUDIO MODE    Full Tracks     The ultimate structural engine for flipping entire 4-bar or 8-bar phrases. 
 
  📦 Installation & Quick Start
 
