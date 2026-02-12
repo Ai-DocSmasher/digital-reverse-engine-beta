@@ -38,8 +38,11 @@ The v1.3.0 update marks the transition from a CLI-first utility to a fully-fledg
  For Developers (Python Environment)
 
 bash
+
 git clone https://github.com/your-repo/digital-reverse-engine.git
+
 pip install -r requirements.txt
+
 python gui_player.py
 
 
