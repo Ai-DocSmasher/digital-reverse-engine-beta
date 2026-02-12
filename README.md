@@ -50,6 +50,8 @@ python gui_player.py
  🛠 Tech Stack
 
  Audio Core: Librosa, NumPy, SoundFile.
+ 
  I/O Engine: SoundDevice (Low-latency callback stream).
+ 
  Interface: PyQt6 (High-DPI vector-based GUI).
 
