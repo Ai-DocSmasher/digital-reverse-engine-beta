@@ -9,8 +9,11 @@ Digital Reverse Engine™ isn’t just a "reverse" effect; it is a structural au
 The v1.3.0 update marks the transition from a CLI-first utility to a fully-fledged professional GUI workstation.
 
  Structural Integrity: Unlike standard DAW "reverse" functions that just flip the sample, DRE uses patent-pending structural logic to keep your audio musically coherent.
+ 
  Pro-Visual Engine: High-resolution waveform ruler with 0:00 to End time markers and "Glider-Zoom" inspection.
+ 
  Intelligent Analysis: Integrated Librosa beat-tracking automatically detects track BPM for instant grid alignment.
+ 
  Live Monitoring: Integrated sounddevice playback engine with a synchronized visual metronome.
 
  🎛 Reverse Modes
