@@ -85,13 +85,21 @@ dist/dre_player/
 digital-reverse-engine/
 
 ├── gui_player.py
+
 ├── dre_player.spec
+
 ├── dre.py
+
 ├── core/
+
 │   ├── dsp/
+
 │   ├── hybrid/
+
 │   └── economic/
+
 └── assets/
+
 
 🧪 Status
 This is a beta‑stage GUI with a stable DSP engine.
