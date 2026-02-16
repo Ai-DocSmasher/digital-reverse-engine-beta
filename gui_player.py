@@ -245,30 +245,48 @@ class NeonWaveform(QWidget):
         end_time = (end / self.total_peaks) * total_duration
         visible_duration = max(end_time - start_time, 1e-9)
 
-        # Adaptive tick spacing
-        if visible_duration > 20:
+        # ============================================================
+        # SMART TICK SPACING (seconds, but spaced by pixel density)
+        # ============================================================
+
+        # Base tick step (seconds)
+        if visible_duration > 120:
+            tick_step = 10.0
+        elif visible_duration > 60:
             tick_step = 5.0
-        elif visible_duration > 10:
+        elif visible_duration > 20:
             tick_step = 2.0
-        elif visible_duration > 5:
+        elif visible_duration > 10:
             tick_step = 1.0
         else:
             tick_step = 0.5
+
+        # Minimum pixel spacing between labels
+        MIN_LABEL_SPACING = 50
+        last_label_x = -999
 
         t = np.ceil(start_time / tick_step) * tick_step
         while t <= end_time:
             rel = (t - start_time) / visible_duration
             tx = int(rel * w)
-            p.drawLine(tx, h - 20, tx, h)
-            p.setPen(QColor(200, 200, 200))
-            p.drawText(tx + 2, h - 5, f"{t:.1f}s")
-            p.setPen(QPen(QColor(0, 255, 200, 80), 1))
+
+            # Only draw label if far enough from previous
+            if tx - last_label_x >= MIN_LABEL_SPACING:
+                p.drawLine(tx, h - 20, tx, h)
+                p.setPen(QColor(200, 200, 200))
+                p.drawText(tx + 2, h - 5, f"{t:.0f}s")
+                p.setPen(QPen(QColor(0, 255, 200, 80), 1))
+                last_label_x = tx
+
             t += tick_step
 
-        # Playhead
-        if start <= (self.playhead_pos / w) * self.total_peaks <= end:
+        # ============================================================
+        # PLAYHEAD — ALWAYS VISIBLE
+        # ============================================================
+        playhead_x = int(self.playhead_pos)
+        if 0 <= playhead_x <= w:
             p.setPen(QPen(Qt.GlobalColor.white, 2))
-            p.drawLine(int(self.playhead_pos), 0, int(self.playhead_pos), h)
+            p.drawLine(playhead_x, 0, playhead_x, h)
 
         # Hint overlay
         if self.hint_opacity > 0:
@@ -279,6 +297,8 @@ class NeonWaveform(QWidget):
             tw = p.fontMetrics().horizontalAdvance(hint)
             p.drawText((w - tw) // 2, 20, hint)
             p.setOpacity(1.0)
+
+
 # ============================================================
 # WORKERS
 # ============================================================
@@ -299,7 +319,8 @@ class TempoWorker(QThread):
                 self.tempo_ready.emit(120.0)
                 return
             onset_env = librosa.onset.onset_strength(y=y.astype(np.float32), sr=self.sr)
-            tempo = librosa.feature.rhythm.tempo( onset_envelope=onset_env, sr=self.sr, aggregate=None )
+            tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=self.sr, aggregate=None)
+
             if hasattr(tempo, "__len__"):
                 val = float(tempo[0])
             else:
@@ -378,10 +399,10 @@ class CyberReverseEngine(QWidget):
         file_pod.layout.addLayout(file_layout)
         main_layout.addWidget(file_pod)
 
-        # --- ROW 2: CENTER WORKSPACE (VISUALS & SETTINGS) ---
+        # --- ROW 2: CENTER WORKSPACE ---
         center_layout = QHBoxLayout()
 
-        # Visualization Side
+        # Visualization
         vis_layout = QVBoxLayout()
         self.sweep = SweepIndicator()
         self.waveform = NeonWaveform()
@@ -389,26 +410,109 @@ class CyberReverseEngine(QWidget):
         vis_layout.addWidget(self.waveform, 1)
         center_layout.addLayout(vis_layout, 3)
 
-        # Math Side (Grid Settings Pod)
+        # Grid Logic Pod
         math_pod = ControlPod("Grid Logic")
         math_pod.setFixedWidth(280)
         m_grid = QGridLayout()
+        m_grid.setHorizontalSpacing(1)
 
+        # ============================================================
+        # BPM STRIP — unified look with ½ and 2× buttons
+        # ============================================================
         m_grid.addWidget(QLabel("BPM:"), 0, 0)
+
+        total_width = 180  # keep your existing width
+
+        bpm_container = QWidget()
+        bpm_container.setFixedWidth(total_width)
+        bpm_container_layout = QHBoxLayout(bpm_container)
+        bpm_container_layout.setContentsMargins(0, 0, 0, 0)
+        bpm_container_layout.setSpacing(0)
+
+        # BPM textbox styled like the buttons
         self.bpm_in = QLineEdit("120")
+        self.bpm_in.setFixedSize(total_width - 80, 30)  # 100px BPM + 40 + 40 buttons
         self.bpm_in.editingFinished.connect(self.refresh_metronome_bpm)
-        m_grid.addWidget(self.bpm_in, 0, 1)
+        self.bpm_in.setStyleSheet("""
+            QLineEdit {
+                background-color: #161b22;
+                color: #79c0ff;
+                border: 1px solid #30363d;
+                border-right: none;
+                border-radius: 0px;
+                font-family: 'Segoe UI';
+                font-size: 9pt;
+                font-weight: bold;
+                padding-left: 6px;
+            }
+        """)
+
+        # ½ button
+        self.half_btn = CyberButton("½", "#79c0ff")
+        self.half_btn.setFixedSize(40, 30)
+        self.half_btn.clicked.connect(self.half_bpm)
+        self.half_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #161b22;
+                color: #79c0ff;
+                border: 1px solid #30363d;
+                border-left: none;
+                border-right: none;
+                border-radius: 0px;
+                font-family: 'Segoe UI';
+                font-size: 9pt;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                border-color: #79c0ff;
+                background-color: #21262d;
+            }
+        """)
+
+        # 2× button
+        self.double_btn = CyberButton("2×", "#79c0ff")
+        self.double_btn.setFixedSize(40, 30)
+        self.double_btn.clicked.connect(self.double_bpm)
+        self.double_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #161b22;
+                color: #79c0ff;
+                border: 1px solid #30363d;
+                border-left: none;
+                border-radius: 0px;
+                font-family: 'Segoe UI';
+                font-size: 9pt;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                border-color: #79c0ff;
+                background-color: #21262d;
+            }
+        """)
+
+        bpm_container_layout.addWidget(self.bpm_in)
+        bpm_container_layout.addWidget(self.half_btn)
+        bpm_container_layout.addWidget(self.double_btn)
+
+        m_grid.addWidget(bpm_container, 0, 1)
+
+        # ============================================================
+        # BARS / BEATS / TATUM — exact same width as BPM strip
+        # ============================================================
 
         m_grid.addWidget(QLabel("BARS:"), 1, 0)
         self.bars_in = QLineEdit("1")
+        self.bars_in.setFixedWidth(total_width)
         m_grid.addWidget(self.bars_in, 1, 1)
 
         m_grid.addWidget(QLabel("BEATS:"), 2, 0)
         self.beats_in = QLineEdit("4")
+        self.beats_in.setFixedWidth(total_width)
         m_grid.addWidget(self.beats_in, 2, 1)
 
         m_grid.addWidget(QLabel("TATUM:"), 3, 0)
         self.tatum_in = QLineEdit("16")
+        self.tatum_in.setFixedWidth(total_width)
         m_grid.addWidget(self.tatum_in, 3, 1)
 
         math_pod.layout.addLayout(m_grid)
@@ -451,7 +555,6 @@ class CyberReverseEngine(QWidget):
         # --- ROW 4: TRANSPORT & LOGS ---
         bottom_layout = QHBoxLayout()
 
-        # Transport
         transport_pod = ControlPod("Master Transport")
         t_layout = QHBoxLayout()
         self.play_btn = CyberButton("Initialize Playback", "#afff33")
@@ -462,7 +565,6 @@ class CyberReverseEngine(QWidget):
         t_layout.addWidget(self.save_btn)
         transport_pod.layout.addLayout(t_layout)
 
-        # Logs
         self.log = QTextEdit()
         self.log.setReadOnly(True)
         self.log.setFixedHeight(100)
@@ -494,18 +596,44 @@ class CyberReverseEngine(QWidget):
             }
         """)
 
+    # --------------------------------------------------------
+    # BPM CONTROL HELPERS
+    # --------------------------------------------------------
     def refresh_metronome_bpm(self):
         """Refresh metronome interval when BPM changes."""
         if not self.click_enabled:
-            return  # Only refresh if metronome is ON
-
+            return
         try:
             bpm = float(self.bpm_in.text())
             interval = int(60000 / max(bpm, 1.0))
             self.click_timer.start(interval)
+            self.sweep.set_bpm(bpm)
             self.log.append(f"[METRO] BPM updated → {bpm:.2f}")
         except Exception:
             self.log.append("[METRO] Invalid BPM; cannot refresh.")
+
+    def half_bpm(self):
+        """Halve the BPM value."""
+        try:
+            bpm = float(self.bpm_in.text())
+            bpm = max(bpm / 2, 1.0)
+            self.bpm_in.setText(f"{bpm:.2f}")
+            self.refresh_metronome_bpm()
+            self.log.append(f"[BPM] Halved → {bpm:.2f}")
+        except ValueError:
+            self.log.append("[ERROR] Invalid BPM; cannot halve.")
+
+    def double_bpm(self):
+        """Double the BPM value."""
+        try:
+            bpm = float(self.bpm_in.text())
+            bpm = min(bpm * 2, 999.0)
+            self.bpm_in.setFixedWidth(60)
+
+            self.refresh_metronome_bpm()
+            self.log.append(f"[BPM] Doubled → {bpm:.2f}")
+        except ValueError:
+            self.log.append("[ERROR] Invalid BPM; cannot double.")
 
     # --------------------------------------------------------
     # FUNCTIONALITY
