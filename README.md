@@ -1,60 +1,98 @@
-Digital Reverse Engine™ (DRE) — Master Edition [v1.3.0]
+# Digital Reverse Engine — Virtual Studio v3.2  
+A modern, tempo‑aware, deterministic audio reversal workstation.
 
-The definitive deterministic structural audio reversal workstation.
-
-Digital Reverse Engine™ isn’t just a "reverse" effect; it is a structural audio processor designed to flip audio while maintaining musical phrasing, grid alignment, and rhythmic integrity. Perfect for AI music creators, sound designers, and professional producers.
-
- 🚀 Why v1.3.0 "Master Edition"?
-
-The v1.3.0 update marks the transition from a CLI-first utility to a fully-fledged professional GUI workstation.
-
- Structural Integrity: Unlike standard DAW "reverse" functions that just flip the sample, DRE uses patent-pending structural logic to keep your audio musically coherent.
- 
- Pro-Visual Engine: High-resolution waveform ruler with 0:00 to End time markers and "Glider-Zoom" inspection.
- 
- Intelligent Analysis: Integrated Librosa beat-tracking automatically detects track BPM for instant grid alignment.
- 
- Live Monitoring: Integrated sounddevice playback engine with a synchronized visual metronome.
-
- 🎛 Reverse Modes
-                             
--TRUE REVERSE--Standard FX--Classic sample-flipping for traditional reverse sounds. 
+The Digital Reverse Engine (DRE) is a hybrid DSP + GUI system designed for
+structural audio reversal using deterministic timing grids.  
+This release introduces a fully redesigned Cyber‑Studio interface with zoomable
+waveforms, time markers, metronome, and real‑time playback visualization.
 
 
--HQ REVERSE--Vocals / Leads--High-fidelity structural reversal with optimized transients. 
+
+✨ Features (v3.2 GUI Edition)
+
+🎛️ Cyber‑Studio Interface
+- Modern dark‑themed UI with neon accents  
+- Sweep Indicator synced to BPM  
+- NeonWaveform visualizer with:
+  - Zoom‑in / zoom‑reset  
+  - Drag‑pan navigation  
+  - Adaptive time markers  
+  - Cyber hint overlay  
+  - Real‑time playhead tracking  
+
+🎚️ Structural Reverse Modes
+All DSP modes use deterministic TimingGrid slicing (no Librosa beat detection):
+- TRUE_REVERSE — classic waveform reverse  
+- HQ_REVERSE — high‑fidelity structural reverse  
+- TATUM_REVERSE — micro‑grid slicing (tatum‑based)  
+- STUDIO_MODE — bar‑level shuffle reverse (GUI alias for STUDIO_REVERSE)  
+
+🎵 Transport & Playback
+- Real‑time playback with sample‑accurate playhead  
+- Click‑to‑jump navigation  
+- Sweep auto‑start/stop synced to playback  
+- Metronome with BPM‑accurate click timing  
+
+📁 File Support
+- Import: WAV, MP3, FLAC  
+- Export: WAV, MP3, FLAC  
+- Stereo + mono compatible  
+
+⚙️ DSP Engine
+- Deterministic TimingGrid  
+- No jitter, no drift  
+- Sample‑accurate slicing  
+- Hybrid pipeline (DSP + cost engine) supported  
 
 
--TATUM REVERSE--Percussion--Micro-structural flips based on the smallest rhythmic units. 
+🚀 Installation
 
+1. Create and activate a virtual environment
 
--STUDIO MODE--Full Tracks--The ultimate structural engine for flipping entire 4-bar or 8-bar phrases. 
+powershell
 
+python -m venv dre-env
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\dre-env\Scripts\activate
 
- 📦 Installation & Quick Start
+2. Install dependencies
 
- For Producers (No Python Required)
-
-1. Download the latest `DRE_Master.zip` from [Releases].
-2. Extract and run `DRE_Master.exe`.
-3. Load your audio, let the engine detect the BPM, and hit Start Engine.
-
- For Developers (Python Environment)
-
-bash
-
-git clone https://github.com/your-repo/digital-reverse-engine.git
-
+powershell
 pip install -r requirements.txt
 
+3. Run the GUI
+
+powershell
 python gui_player.py
 
+🏗️ Building the Executable (Windows)
 
+Install PyInstaller
 
- 🛠 Tech Stack
+powershell
+pip install pyinstaller
 
- Audio Core: Librosa, NumPy, SoundFile.
- 
- I/O Engine: SoundDevice (Low-latency callback stream).
- 
- Interface: PyQt6 (High-DPI vector-based GUI).
+Build using the spec file
 
+powershell
+pyinstaller dre_player.spec
+
+The executable will appear in:
+
+dist/dre_player/
+📦 Project Structure
+
+digital-reverse-engine/
+│
+├── gui_player.py
+├── dre_player.spec
+├── dre.py
+├── core/
+│   ├── dsp/
+│   ├── hybrid/
+│   └── economic/
+└── assets/
+
+🧪 Status
+This is a beta‑stage GUI with a stable DSP engine.
+Feedback, issues, and feature requests are welcome.
