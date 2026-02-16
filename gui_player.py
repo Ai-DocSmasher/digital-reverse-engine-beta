@@ -122,7 +122,8 @@ class NeonWaveform(QWidget):
         self.playhead_pos = 0
         self.sr = 44100
         self.audio_len = 0
-        self.setMinimumHeight(250)
+        self.setMinimumHeight(180)
+        self.setMinimumWidth(0)
         self.setMouseTracking(True)
 
         # Zoom + hint state
@@ -361,7 +362,9 @@ class CyberReverseEngine(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AGI-aiPilotGEM // REVERSE ENGINE v3.2")
-        self.resize(1200, 850)
+
+        # Default window size (fits 1366×768)
+        self.resize(1200, 669)
 
         # Shared Audio State
         self.original_audio = None
@@ -382,9 +385,13 @@ class CyberReverseEngine(QWidget):
         self.play_timer = QTimer()
         self.play_timer.timeout.connect(self.sync_ui)
 
-        # Album art placeholder (must exist before init_ui)
+        # Album art placeholder
         self.album_art = QLabel()
-        self.album_art.setFixedSize(200, 200)
+        self.album_art.setMinimumSize(200, 200)
+        self.album_art.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
         self.album_art.setStyleSheet("background-color: transparent; border: none;")
         self.album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.album_art.setScaledContents(False)
@@ -400,7 +407,7 @@ class CyberReverseEngine(QWidget):
         # --- ROW 1: FILE OPERATIONS POD ---
         file_pod = ControlPod("Source Input")
         file_layout = QHBoxLayout()
-        self.load_btn = CyberButton("Import Wave", "#58a6ff")
+        self.load_btn = CyberButton("Import Audio", "#58a6ff")
         self.load_btn.clicked.connect(self.load_file)
         self.file_path_display = QLineEdit("NO_FILE_LOADED")
         self.file_path_display.setReadOnly(True)
@@ -422,7 +429,7 @@ class CyberReverseEngine(QWidget):
 
         # Grid Logic Pod
         math_pod = ControlPod("Grid Logic")
-        math_pod.setFixedWidth(280)
+        math_pod.setMinimumWidth(280)
         m_grid = QGridLayout()
         m_grid.setHorizontalSpacing(1)
 
@@ -432,33 +439,38 @@ class CyberReverseEngine(QWidget):
 
         bpm_container = QWidget()
         bpm_container.setFixedWidth(total_width)
+        bpm_container.setStyleSheet("""
+            QWidget {
+                background-color: #0d1117;   /* match pod background */
+                border: none;
+            }
+        """)
         bpm_container_layout = QHBoxLayout(bpm_container)
         bpm_container_layout.setContentsMargins(0, 0, 0, 0)
         bpm_container_layout.setSpacing(0)
 
+        # BPM textbox — clean bubble, no halo
         self.bpm_in = QLineEdit("120")
-        self.bpm_in.setFixedSize(total_width - 80, 30)
+        self.bpm_in.setMinimumHeight(26)
         self.bpm_in.editingFinished.connect(self.refresh_metronome_bpm)
         self.bpm_in.setStyleSheet("""
             QLineEdit {
-                background-color: #161b22;
-                color: #79c0ff;
+                background-color: #0d1117;   /* same as container */
+                color: #58a6ff;
                 border: 1px solid #30363d;
-                border-right: none;
-                border-radius: 0px;
-                font-family: 'Segoe UI';
-                font-size: 9pt;
-                font-weight: bold;
-                padding-left: 6px;
+                border-radius: 6px;
+                padding-left: 8px;
+                padding-right: 8px;
             }
         """)
 
+        # BPM modifier buttons
         self.half_btn = CyberButton("½", "#79c0ff")
-        self.half_btn.setFixedSize(40, 30)
+        self.half_btn.setMinimumHeight(26)
         self.half_btn.clicked.connect(self.half_bpm)
 
         self.double_btn = CyberButton("2×", "#79c0ff")
-        self.double_btn.setFixedSize(40, 30)
+        self.double_btn.setMinimumHeight(26)
         self.double_btn.clicked.connect(self.double_bpm)
 
         bpm_container_layout.addWidget(self.bpm_in)
@@ -484,6 +496,7 @@ class CyberReverseEngine(QWidget):
 
         math_pod.layout.addLayout(m_grid)
 
+
         # Metronome toggle
         self.metro_btn = CyberButton("Metronome: OFF", "#00ffc8")
         self.metro_btn.clicked.connect(self.toggle_metronome)
@@ -496,13 +509,17 @@ class CyberReverseEngine(QWidget):
         album_wrap_layout.addStretch()
         album_wrap_layout.addWidget(self.album_art)
         album_wrap_layout.addStretch()
-        math_pod.layout.addWidget(album_wrap)
-
-        math_pod.layout.addStretch()
 
         self.reset_btn = CyberButton("Clear Buffer", "#ff6b8b")
         self.reset_btn.clicked.connect(self.reset_audio)
+    
+        math_pod.layout.addWidget(self.metro_btn)
+        math_pod.layout.addStretch()
+        math_pod.layout.addWidget(album_wrap)
+        math_pod.layout.addStretch()
         math_pod.layout.addWidget(self.reset_btn)
+
+        
 
         center_layout.addWidget(math_pod)
         main_layout.addLayout(center_layout)
@@ -543,7 +560,7 @@ class CyberReverseEngine(QWidget):
 
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        self.log.setFixedHeight(100)
+        self.log.setMinimumHeight(60)
 
         bottom_layout.addWidget(transport_pod, 1)
         bottom_layout.addWidget(self.log, 1)
@@ -571,6 +588,19 @@ class CyberReverseEngine(QWidget):
                 font-size: 8pt;
             }
         """)
+
+    # Auto-rescale album art when window is resized / maximized / fullscreen
+    def resizeEvent(self, event):
+        if self.album_art.pixmap():
+            pix = self.album_art.pixmap().scaled(
+                self.album_art.width(),
+                self.album_art.height(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.album_art.setPixmap(pix)
+
+        super().resizeEvent(event)
 
     # --------------------------------------------------------
     # BPM CONTROL HELPERS
@@ -889,7 +919,8 @@ class CyberReverseEngine(QWidget):
                 pix = QPixmap()
                 pix.loadFromData(art_data)
                 pix = pix.scaled(
-                    200, 200,
+                    self.album_art.width(),
+                    self.album_art.height(),
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
                 )
