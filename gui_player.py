@@ -353,7 +353,7 @@ class CyberReverseEngine(QWidget):
         self.click_timer = QTimer()
         self.click_timer.timeout.connect(self.play_click)
         t = np.linspace(0, 0.03, int(44100 * 0.03))
-        self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.5).astype(np.float32)
+        self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.10).astype(np.float32)
 
         # Playback timer
         self.play_timer = QTimer()
@@ -773,4 +773,3 @@ if __name__ == "__main__":
     window = CyberReverseEngine()
     window.show()
     sys.exit(app.exec())
-
