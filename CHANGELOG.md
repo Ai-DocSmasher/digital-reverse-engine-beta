@@ -1,70 +1,69 @@
-Changelog — Digital Reverse Engine™ Player Edition
-All notable changes to this project will be documented here.
 
-[1.3.0] — 2026-02-11
-Added
-Master Time Ruler: Added high-visibility 0:00 and track duration markers to the waveform.
+---
 
-Dynamic UX Layout: Integrated Expanding policies for Waveform and Log windows; the UI now scales professionally to Fullscreen/Maximized states.
+# ⭐ **CHANGELOG.md (Draft for This Version)**  
+*(Clear, structured, professional)*
 
-Enhanced Log Engine: Added detailed context-aware logging for user actions ([USER]), processing ([PROCESS]), and system status ([ENGINE]).
+```markdown
+# Digital Reverse Engine — Changelog
 
-Export Versatility: Added support for both MP3 and WAV master exports.
+---
 
-Visual Metronome Lock: Sweep indicator height is now fixed for consistent UX across various window sizes.
+## v3.2 — Cyber‑Studio GUI Upgrade (Current Release)
 
-Improved
-Process Robustness: Added signal length validation to TempoWorker to prevent FFT errors on short audio buffers.
+### 🔥 Major UI/UX Enhancements
+- Added **NeonWaveform** visualizer with:
+  - Zoom‑in / zoom‑reset
+  - Drag‑pan navigation
+  - Adaptive time markers
+  - Cyber hint overlay
+  - Real‑time playhead tracking
+- Added **SweepIndicator** with BPM‑synced animation
+- Sweep now **auto‑starts** on playback and **auto‑stops** on playback end
+- Added **metronome** with BPM‑accurate click timing
+- Added click‑to‑jump navigation on waveform
+- Added improved transport controls and visual feedback
 
-UI Responsiveness: Optimized Waveform pre-caching to 1200-pixel density for instant redraws during window resizing.
+### 🎧 DSP Integration
+- GUI now correctly maps `STUDIO_MODE` → `STUDIO_REVERSE`
+- Updated ReverseWorker to pass deterministic grid parameters
+- Improved error fallback handling
 
-Fixed
-BPM Sync Error: Resolved AttributeError: 'TempoSweepIndicator' object has no attribute 'set_bpm'.
+### 🎵 File Support
+- Import: WAV, MP3, FLAC
+- Export: WAV, MP3, FLAC
+- Improved stereo/mono handling
 
-Librosa Warning: Suppressed n_fft=2048 warning by adding input signal length verification.
+### 🛠️ Internal Improvements
+- Cleaned PLAYBACK block with proper indentation
+- Added sweep sync inside `snap_to_ms`
+- Added zoom‑aware playhead rendering
+- Improved waveform sampling resolution (2000‑point peak map)
+- Added hint fade‑out timer
 
-Marker Color Palette: Swapped gray time markers for high-contrast white to ensure visibility on the dark studio theme.
+---
 
-[1.2.0] — 2026-02-09
-Added
-New sounddevice-based click metronome (no external dependencies)
+## v3.1 — Deterministic TimingGrid Integration
+- Replaced all beat detection with deterministic grid slicing
+- Added HQ, TATUM, and STUDIO structural modes
+- Added hybrid DSP + cost engine pipeline
 
-Train-car sweep indicator for improved high-BPM readability
+---
 
-System Log panel for debugging and user feedback
+## v3.0 — Initial GUI Prototype
+- Basic waveform display
+- Basic reverse modes
+- Basic transport
 
-Improved Tap Tempo estimator (multi-tap averaging)
+---
 
-Restart now fully restores original audio buffer and UI state
+## v2.x — CLI‑Only Engine
+- TRUE_REVERSE
+- WAV I/O
+- Early DSP experiments
 
-Improved
-Sweep indicator adaptive scaling for BPM > 90
+---
 
-Cleaner GUI layout and dark theme consistency
-
-Playback engine stability and safe callback handling
-
-Fixed
-Removed redundant code blocks from earlier versions
-
-Eliminated simpleaudio dependency (Python 3.13 incompatible)
-
-Corrected indentation and structural issues in GUI class
-
-[1.1.0] — 2026-02-04
-Added
-First public GUI release
-
-Waveform viewer
-
-Reverse modes (True, HQ, Tatum, Studio)
-
-Tempo detection via librosa
-
-Tap Tempo (initial version)
-
-Playback engine with safe stop
-
-[1.0.0] — 2026-02-01
-Added
-Initial CLI-only release
+## v1.x — Early Experiments
+- Prototype reverse logic
+- No GUI
