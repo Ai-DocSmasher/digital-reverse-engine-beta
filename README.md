@@ -80,6 +80,7 @@ pyinstaller dre_player.spec
 The executable will appear in:
 
 dist/dre_player/
+
 📦 Project Structure
 
 - digital-reverse-engine/
