@@ -83,7 +83,7 @@ dist/dre_player/
 📦 Project Structure
 
 digital-reverse-engine/
-│
+
 ├── gui_player.py
 ├── dre_player.spec
 ├── dre.py
