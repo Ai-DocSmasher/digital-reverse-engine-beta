@@ -382,6 +382,14 @@ class CyberReverseEngine(QWidget):
         self.play_timer = QTimer()
         self.play_timer.timeout.connect(self.sync_ui)
 
+        # Album art placeholder (must exist before init_ui)
+        self.album_art = QLabel()
+        self.album_art.setFixedSize(200, 200)
+        self.album_art.setStyleSheet("background-color: transparent; border: none;")
+        self.album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.album_art.setScaledContents(False)
+
+        # Build UI
         self.init_ui()
         self.apply_theme()
 
@@ -418,12 +426,9 @@ class CyberReverseEngine(QWidget):
         m_grid = QGridLayout()
         m_grid.setHorizontalSpacing(1)
 
-        # ============================================================
-        # BPM STRIP — unified look with ½ and 2× buttons
-        # ============================================================
+        # BPM strip
         m_grid.addWidget(QLabel("BPM:"), 0, 0)
-
-        total_width = 180  # keep your existing width
+        total_width = 180
 
         bpm_container = QWidget()
         bpm_container.setFixedWidth(total_width)
@@ -431,9 +436,8 @@ class CyberReverseEngine(QWidget):
         bpm_container_layout.setContentsMargins(0, 0, 0, 0)
         bpm_container_layout.setSpacing(0)
 
-        # BPM textbox styled like the buttons
         self.bpm_in = QLineEdit("120")
-        self.bpm_in.setFixedSize(total_width - 80, 30)  # 100px BPM + 40 + 40 buttons
+        self.bpm_in.setFixedSize(total_width - 80, 30)
         self.bpm_in.editingFinished.connect(self.refresh_metronome_bpm)
         self.bpm_in.setStyleSheet("""
             QLineEdit {
@@ -449,59 +453,20 @@ class CyberReverseEngine(QWidget):
             }
         """)
 
-        # ½ button
         self.half_btn = CyberButton("½", "#79c0ff")
         self.half_btn.setFixedSize(40, 30)
         self.half_btn.clicked.connect(self.half_bpm)
-        self.half_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #161b22;
-                color: #79c0ff;
-                border: 1px solid #30363d;
-                border-left: none;
-                border-right: none;
-                border-radius: 0px;
-                font-family: 'Segoe UI';
-                font-size: 9pt;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                border-color: #79c0ff;
-                background-color: #21262d;
-            }
-        """)
 
-        # 2× button
         self.double_btn = CyberButton("2×", "#79c0ff")
         self.double_btn.setFixedSize(40, 30)
         self.double_btn.clicked.connect(self.double_bpm)
-        self.double_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #161b22;
-                color: #79c0ff;
-                border: 1px solid #30363d;
-                border-left: none;
-                border-radius: 0px;
-                font-family: 'Segoe UI';
-                font-size: 9pt;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                border-color: #79c0ff;
-                background-color: #21262d;
-            }
-        """)
 
         bpm_container_layout.addWidget(self.bpm_in)
         bpm_container_layout.addWidget(self.half_btn)
         bpm_container_layout.addWidget(self.double_btn)
-
         m_grid.addWidget(bpm_container, 0, 1)
 
-        # ============================================================
-        # BARS / BEATS / TATUM — exact same width as BPM strip
-        # ============================================================
-
+        # Bars / Beats / Tatum
         m_grid.addWidget(QLabel("BARS:"), 1, 0)
         self.bars_in = QLineEdit("1")
         self.bars_in.setFixedWidth(total_width)
@@ -523,6 +488,15 @@ class CyberReverseEngine(QWidget):
         self.metro_btn = CyberButton("Metronome: OFF", "#00ffc8")
         self.metro_btn.clicked.connect(self.toggle_metronome)
         math_pod.layout.addWidget(self.metro_btn)
+
+        # Album art in the gap between metronome and clear buffer
+        album_wrap = QWidget()
+        album_wrap_layout = QHBoxLayout(album_wrap)
+        album_wrap_layout.setContentsMargins(0, 0, 0, 0)
+        album_wrap_layout.addStretch()
+        album_wrap_layout.addWidget(self.album_art)
+        album_wrap_layout.addStretch()
+        math_pod.layout.addWidget(album_wrap)
 
         math_pod.layout.addStretch()
 
@@ -602,9 +576,7 @@ class CyberReverseEngine(QWidget):
     # BPM CONTROL HELPERS
     # --------------------------------------------------------
     def refresh_metronome_bpm(self):
-        """Refresh metronome interval when BPM changes."""
         self.log.append(f"[BPM] Updated → {self.bpm_in.text()}")
-
         if not self.click_enabled:
             return
         try:
@@ -617,7 +589,6 @@ class CyberReverseEngine(QWidget):
             self.log.append("[METRO] Invalid BPM; cannot refresh.")
 
     def half_bpm(self):
-        """Halve the BPM value."""
         try:
             bpm = float(self.bpm_in.text())
             bpm = max(bpm / 2, 1.0)
@@ -628,12 +599,10 @@ class CyberReverseEngine(QWidget):
             self.log.append("[ERROR] Invalid BPM; cannot halve.")
 
     def double_bpm(self):
-        """Double the BPM value."""
         try:
             bpm = float(self.bpm_in.text())
             bpm = min(bpm * 2, 999.0)
             self.bpm_in.setFixedWidth(60)
-
             self.refresh_metronome_bpm()
             self.log.append(f"[BPM] Doubled → {bpm:.2f}")
         except ValueError:
@@ -648,17 +617,18 @@ class CyberReverseEngine(QWidget):
         )
         if not path:
             return
+
         y, sr = librosa.load(path, sr=None, mono=False)
         self.original_audio = y.T if y.ndim > 1 else y
         self.current_audio = self.original_audio.copy()
         self.sr = sr
         self.file_path_display.setText(os.path.basename(path))
+        self.load_album_art(path)
 
         vis = y.mean(axis=0) if y.ndim > 1 else y
         self.waveform.set_waveform(vis, sr)
         self.log.append(f"[INIT] Loaded {path}")
 
-        # Optional: auto tempo detection
         self.log.append("[ENGINE] Detecting BPM…")
         self.tempo_worker = TempoWorker(y, sr)
         self.tempo_worker.tempo_ready.connect(self.on_tempo_detected)
@@ -736,7 +706,7 @@ class CyberReverseEngine(QWidget):
     # PLAYBACK
     # --------------------------------------------------------
     def toggle_play(self):
-        # --- STOP PLAYBACK ---
+        # Stop playback
         if self.stream is not None and self.stream.active:
             try:
                 self.stream.stop()
@@ -747,7 +717,6 @@ class CyberReverseEngine(QWidget):
             self.stream = None
             self.play_timer.stop()
 
-            # Auto-stop sweep indicator
             self.sweep.timer.stop()
             self.sweep.progress = 0.0
             self.sweep.update()
@@ -755,17 +724,14 @@ class CyberReverseEngine(QWidget):
             self.play_btn.setText("Initialize Playback")
             return
 
-        # --- START PLAYBACK ---
+        # Start playback
         if self.current_audio is None:
             return
 
         self.play_idx = 0
         audio = self.current_audio
-
-        # Determine channel count
         chs = 1 if audio.ndim == 1 else audio.shape[1]
 
-        # Start audio stream
         self.stream = sd.OutputStream(
             samplerate=self.sr,
             channels=chs,
@@ -773,10 +739,8 @@ class CyberReverseEngine(QWidget):
         )
         self.stream.start()
 
-        # UI sync timer
         self.play_timer.start(30)
 
-        # Auto-start sweep indicator with BPM
         try:
             bpm = float(self.bpm_in.text())
             self.sweep.set_bpm(bpm)
@@ -786,7 +750,6 @@ class CyberReverseEngine(QWidget):
 
         self.play_btn.setText("Cease Playback")
 
-
     def audio_callback(self, outdata, frames, time_info, status):
         audio = self.current_audio
         n = len(audio)
@@ -794,7 +757,6 @@ class CyberReverseEngine(QWidget):
         start = self.play_idx
         end = min(start + frames, n)
 
-        # MONO
         if audio.ndim == 1:
             chunk = audio[start:end]
             if len(chunk) < frames:
@@ -807,8 +769,6 @@ class CyberReverseEngine(QWidget):
                 if outdata.shape[1] > 1:
                     outdata[:, 1:] = 0
                 self.play_idx = end
-
-        # MULTICHANNEL
         else:
             chunk = audio[start:end, :]
             if len(chunk) < frames:
@@ -820,9 +780,7 @@ class CyberReverseEngine(QWidget):
                 outdata[:] = chunk
                 self.play_idx = end
 
-
     def sync_ui(self):
-        # Auto-reset when playback ends naturally
         if self.stream is not None and not self.stream.active:
             self.play_btn.setText("Initialize Playback")
             self.sweep.timer.stop()
@@ -830,39 +788,30 @@ class CyberReverseEngine(QWidget):
             self.sweep.update()
             return
 
-        # Normal UI updates while playing
         if self.current_audio is None or self.sr <= 0:
             return
 
-        # Update waveform playhead
         ms = (self.play_idx / self.sr) * 1000.0
         self.waveform.update_playhead(ms)
 
-        # Keep sweep BPM synced
         try:
             bpm = float(self.bpm_in.text())
             self.sweep.set_bpm(bpm)
         except Exception:
             pass
 
-
     def snap_to_ms(self, ms):
-        """Called by NeonWaveform on click to snap playback and playhead."""
         if self.current_audio is None or self.sr <= 0:
             return
 
-        # Clamp MS
         total_ms = (len(self.current_audio) / self.sr) * 1000.0
         ms = max(0.0, min(total_ms, ms))
 
-        # Convert ms → sample index
         sample_pos = int((ms / 1000.0) * self.sr)
         self.play_idx = max(0, min(sample_pos, len(self.current_audio) - 1))
 
-        # Update waveform playhead
         self.waveform.update_playhead(ms)
 
-        # Keep sweep synced if playing
         if self.stream is not None and self.stream.active:
             try:
                 bpm = float(self.bpm_in.text())
@@ -872,12 +821,85 @@ class CyberReverseEngine(QWidget):
             if not self.sweep.timer.isActive():
                 self.sweep.timer.start()
         else:
-            # Freeze sweep when not playing
             self.sweep.timer.stop()
             self.sweep.progress = 0.0
             self.sweep.update()
 
         self.log.append(f"[NAV] Snapped to {ms/1000.0:.2f}s")
+
+    # --------------------------------------------------------
+    # UNIVERSAL ID3v2.4 ALBUM ART LOADER (Suno-compatible)
+    # --------------------------------------------------------
+    def load_album_art(self, path):
+        """Extract album art from ANY MP3 (APIC, GEOB, PRIV, ID3v2.4)."""
+        from PyQt6.QtGui import QPixmap
+        import mutagen
+        from mutagen.id3 import ID3, APIC, PIC, GEOB, PRIV
+
+        self.album_art.clear()
+        art_data = None
+
+        try:
+            tags = ID3(path)
+
+            # --------------------------------------------------------
+            # 1. ALL APIC frames (ID3v2.3 + ID3v2.4)
+            # --------------------------------------------------------
+            for frame in tags.values():
+                if isinstance(frame, APIC):
+                    if frame.data:
+                        art_data = frame.data
+                        break
+
+            # --------------------------------------------------------
+            # 2. PIC frames (ID3v2.2)
+            # --------------------------------------------------------
+            if art_data is None:
+                for frame in tags.values():
+                    if isinstance(frame, PIC):
+                        if frame.data:
+                            art_data = frame.data
+                            break
+
+            # --------------------------------------------------------
+            # 3. GEOB frames (Suno sometimes uses this)
+            # --------------------------------------------------------
+            if art_data is None:
+                for frame in tags.values():
+                    if isinstance(frame, GEOB):
+                        if frame.data:
+                            art_data = frame.data
+                            break
+
+            # --------------------------------------------------------
+            # 4. PRIV frames (Windows & some encoders)
+            # --------------------------------------------------------
+            if art_data is None:
+                for frame in tags.values():
+                    if isinstance(frame, PRIV):
+                        # Some PRIV frames contain JPEG blobs
+                        if frame.data and frame.data.startswith(b"\xff\xd8"):
+                            art_data = frame.data
+                            break
+
+            # --------------------------------------------------------
+            # APPLY RESULT
+            # --------------------------------------------------------
+            if art_data:
+                pix = QPixmap()
+                pix.loadFromData(art_data)
+                pix = pix.scaled(
+                    200, 200,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self.album_art.setPixmap(pix)
+            else:
+                print("No embedded album art found in:", path)
+
+        except Exception as e:
+            print("Album art loader error:", e)
+            self.album_art.clear()
 
 
     # --------------------------------------------------------
@@ -926,9 +948,6 @@ class CyberReverseEngine(QWidget):
         event.accept()
 
 
-# --------------------------------------------------------
-# MAIN ENTRY POINT
-# --------------------------------------------------------
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = CyberReverseEngine()
