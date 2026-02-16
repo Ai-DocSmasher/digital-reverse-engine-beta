@@ -4,12 +4,13 @@ aiCOPILOT Reverse Engine | BUILD 3.2
 A tempo-aware, reversible audio engine with upgraded UX, logging, and visual feedback.
 """
 
+# gui_player.py
+
 import sys
 import os
 import time
 import shutil
 import tempfile
-import random
 import numpy as np
 import soundfile as sf
 import sounddevice as sd
@@ -18,325 +19,201 @@ import librosa
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QLineEdit,
     QFileDialog, QHBoxLayout, QVBoxLayout, QGridLayout,
-    QTextEdit, QSizePolicy
+    QTextEdit, QSizePolicy, QFrame
 )
-from PyQt6.QtGui import QPainter, QColor, QPen, QFont
+from PyQt6.QtGui import QPainter, QColor, QPen, QFont, QLinearGradient
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 
 # ============================================================
-# STYLED CONTROLS (aiCOPILOT AESTHETIC)
+# MODERN CYBER-TECH STYLED CONTROLS
 # ============================================================
-class StyledButton(QPushButton):
+class ControlPod(QFrame):
+    """A container for grouping related controls with a subtle border."""
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+            }
+        """)
+        self.layout = QVBoxLayout(self)
+        self.header = QLabel(title.upper())
+        self.header.setStyleSheet(
+            "color: #58a6ff; font-size: 8pt; font-weight: bold; "
+            "border: none; background: transparent;"
+        )
+        self.layout.addWidget(self.header)
+
+
+class CyberButton(QPushButton):
     def __init__(self, text, accent="#00ffc8", parent=None):
         super().__init__(text, parent)
         self.accent = accent
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.setFixedHeight(38)
         self.setStyleSheet(f"""
             QPushButton {{
-                background-color: #141414;
+                background-color: #161b22;
                 color: {accent};
-                border-radius: 4px;
-                border: 1px solid #333;
-                padding: 8px 14px;
-                font-family: 'Segoe UI Semibold';
-                letter-spacing: 0.5px;
+                border-radius: 2px;
+                border: 1px solid #30363d;
+                font-family: 'Segoe UI';
+                font-size: 9pt;
+                text-transform: uppercase;
+                font-weight: bold;
             }}
             QPushButton:hover {{
                 border-color: {accent};
-                background-color: #1f1f1f;
+                background-color: #21262d;
             }}
             QPushButton:pressed {{
-                background-color: #0b0b0b;
-            }}
-            QPushButton:disabled {{
-                color: #555;
-                border-color: #222;
-                background-color: #101010;
+                background-color: #000000;
             }}
         """)
 
-class AccentLabel(QLabel):
-    def __init__(self, text, color="#9fa4b8", parent=None):
-        super().__init__(text, parent)
-        self.setStyleSheet(f"color: {color}; font-family: 'Segoe UI'; font-size: 10pt;")
-
 # ============================================================
-# WORKERS (FINAL, STABLE, NON-BLOCKING, AUTO-DETECT FIXED)
+# ENHANCED VISUALIZERS
 # ============================================================
-class TempoWorker(QThread):
-    tempo_ready = pyqtSignal(float)
-
-    def __init__(self, audio, sr, parent=None):
-        super().__init__(parent)
-        self.audio = audio
-        self.sr = sr
-
-    def run(self):
-        """
-        Fast, stable, non-blocking tempo detection.
-        Uses onset envelope + autocorrelation instead of beat_track
-        to avoid UI freezing and librosa deprecation warnings.
-        """
-        try:
-            y = self.audio
-
-            # Convert to mono if needed
-            if y.ndim > 1:
-                y = y.mean(axis=1)
-
-            # Too short → default tempo
-            if len(y) < 2048:
-                self.tempo_ready.emit(120.0)
-                return
-
-            # Fast onset envelope
-            onset_env = librosa.onset.onset_strength(
-                y=y.astype(np.float32),
-                sr=self.sr
-            )
-
-            # Autocorrelation-based tempo estimate
-            tempo = librosa.beat.tempo(
-                onset_envelope=onset_env,
-                sr=self.sr,
-                aggregate=None
-            )
-
-            # tempo may be array or scalar depending on librosa version
-            if hasattr(tempo, "__len__"):
-                val = float(tempo[0])
-            else:
-                val = float(tempo)
-
-            self.tempo_ready.emit(val if val > 0 else 120.0)
-
-        except Exception:
-            self.tempo_ready.emit(120.0)
-
-
-class ReverseWorker(QThread):
-    finished = pyqtSignal(np.ndarray, str)
-
-    def __init__(self, audio, sr, mode, tempo, parent=None):
-        super().__init__(parent)
-        self.params = {
-            "audio": audio,
-            "sample_rate": sr,
-            "mode": mode,
-            "tempo": tempo
-        }
-
-    def run(self):
-        """
-        Reverse engine pipeline worker.
-        Unchanged behavior, but wrapped in safety fallback.
-        """
-        try:
-            from core.hybrid.pipeline import process_audio
-            processed = process_audio(**self.params)
-            self.finished.emit(processed, self.params["mode"])
-
-        except Exception:
-            # Fallback for standalone testing or missing pipeline
-            self.finished.emit(self.params["audio"], "ERROR_FALLBACK")
-# ============================================================
-# VISUAL COMPONENTS (TIME RULER + UPGRADED SWEEP)
-# ============================================================
-class TempoSweepIndicator(QWidget):
-    """
-    aiCOPILOT variant:
-    - Slightly softer palette
-    - BPM-sensitive sweep speed
-    """
+class SweepIndicator(QWidget):
+    """A rhythmic pulse bar that reacts to the set BPM."""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.num_cells = 40
+        self.setFixedHeight(10)
         self.bpm = 120.0
-        self.phase = 0.0
-        self.last_time = time.time()
-        self.timer = QTimer(self)
-        self.timer.setInterval(20)
-        self.timer.timeout.connect(self.update_phase)
-        self.setFixedHeight(52)
-        self.color_palette = [
-            QColor(0, 255, 200),
-            QColor(0, 180, 255),
-            QColor(255, 120, 80)
-        ]
-        self.current_color = self.color_palette[0]
+        self.progress = 0.0
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.animate)
+        self.timer.start(20)
 
-    def set_bpm(self, bpm_str):
+    def set_bpm(self, bpm_val: float):
         try:
-            val = float(bpm_str)
-            self.bpm = val if val > 0 else 120.0
+            v = float(bpm_val)
+            self.bpm = v if v > 0 else 120.0
         except Exception:
             self.bpm = 120.0
 
-    def start(self):
-        self.last_time = time.time()
-        if not self.timer.isActive():
-            self.timer.start()
-
-    def stop(self):
-        self.timer.stop()
-        self.phase = 0.0
-        self.update()
-
-    def update_phase(self):
-        now = time.time()
-        dt = now - self.last_time
-        self.last_time = now
-        period = (60.0 / max(self.bpm, 1.0)) * 1.3
-        self.phase = (self.phase + dt / period) % 1.0
+    def animate(self):
+        bps = self.bpm / 60.0
+        self.progress = (time.time() * bps) % 1.0
         self.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor(8, 8, 10))
-        cell_w = self.width() / self.num_cells
-        center_idx = self.phase * self.num_cells
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.fillRect(self.rect(), QColor(22, 27, 34))
 
-        for i in range(self.num_cells):
-            dist = abs(i - center_idx)
-            bright = max(0.0, 1.0 - (dist / 7.0)) ** 2.2
-            c = QColor(self.current_color)
-            c.setAlpha(int(255 * bright))
-            p.fillRect(
-                int(i * cell_w + 1),
-                6,
-                int(cell_w - 2),
-                self.height() - 12,
-                c
-            )
+        w = self.width()
+        indicator_x = int(self.progress * w)
+        grad = QLinearGradient(indicator_x - 100, 0, indicator_x, 0)
+        grad.setColorAt(0, QColor(0, 0, 0, 0))
+        grad.setColorAt(1, QColor(0, 255, 200))
+
+        p.fillRect(0, 0, indicator_x, self.height(), grad)
 
 
-class WaveformWidget(QWidget):
-    """
-    Precision build:
-    - Peak-based waveform
-    - High-accuracy sub-second Time axis
-    - Playhead
-    - Right-click zoom + drag pan
-    - Left-click snap-to-position
-    - Hover-only hint with fade-out after 1.5–2 seconds
-    """
+class NeonWaveform(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.peaks = None
+        self.playhead_pos = 0
         self.sr = 44100
         self.audio_len = 0
-        self.playhead_sample = 0
+        self.setMinimumHeight(250)
+        self.setMouseTracking(True)
+
+        # Zoom + hint state
         self.zoom_active = False
         self.sel_start = 0
         self.sel_end = 0
-        self.axis_h = 45
-        self.setMinimumHeight(220)
-        self.setMouseTracking(True)
-
-        # Hover + fade state
-        self.hovering = False
-        self.hint_opacity = 0.0
-
-        # Fade timer (50ms tick)
-        self.hint_timer = QTimer()
-        self.hint_timer.setInterval(50)
-        self.hint_timer.timeout.connect(self.fade_hint)
-
-        # Fade delay before fade-out begins
-        self.HINT_DURATION = 40   # 40 ticks * 50ms = 2 seconds
-        self.hint_lifetime = 0
-
-    def fade_hint(self):
-        """
-        Hint fades out even while hovering after 1.5–2 seconds.
-        Reappears when mouse moves again.
-        """
-        if self.hovering:
-            if self.hint_lifetime > 0:
-                self.hint_lifetime -= 1
-            else:
-                # Fade out even while hovering
-                self.hint_opacity = max(0.0, self.hint_opacity - 0.05)
-        else:
-            # Fade out normally when not hovering
-            if self.hint_lifetime > 0:
-                self.hint_lifetime -= 1
-            else:
-                self.hint_opacity = max(0.0, self.hint_opacity - 0.05)
-
-        self.update()
-
-    def enterEvent(self, event):
-        self.hovering = True
-        self.hint_lifetime = self.HINT_DURATION
         self.hint_opacity = 1.0
-        if not self.hint_timer.isActive():
-            self.hint_timer.start()
-        self.update()
 
-    def leaveEvent(self, event):
-        self.hovering = False
-        self.update()
+        self.hint_timer = QTimer()
+        self.hint_timer.setInterval(40)
+        self.hint_timer.timeout.connect(self.fade_hint)
+        self.hint_timer.start()
 
+    # ============================================================
+    # ZOOM + TIME MARKERS + CYBER HINT OVERLAY
+    # ============================================================
     def set_waveform(self, audio, sr):
         self.sr = sr
         self.audio_len = len(audio)
-        pixels = max(600, self.width() or 1200)
-        step = max(1, len(audio) // pixels)
+
+        samples = 2000
+        step = max(1, len(audio) // samples)
         self.peaks = np.array([
             np.max(np.abs(audio[i:i + step]))
             for i in range(0, len(audio), step)
         ])
-        self.total_samples = len(self.peaks)
-        self.sel_start = 0
-        self.sel_end = self.total_samples
+        self.total_peaks = len(self.peaks)
+
+        # Reset zoom
         self.zoom_active = False
+        self.sel_start = 0
+        self.sel_end = self.total_peaks
+
+        # Reset hint
+        self.hint_opacity = 1.0
+
         self.update()
 
-    def set_position_ms(self, ms):
+    def fade_hint(self):
+        if self.hint_opacity > 0:
+            self.hint_opacity -= 0.02
+            self.update()
+
+    def update_playhead(self, ms):
         if self.audio_len == 0:
             return
-        ratio = (ms / 1000.0) / (self.audio_len / self.sr)
-        self.playhead_sample = int(ratio * self.total_samples)
+
+        total_ms = (self.audio_len / self.sr) * 1000
+        ratio = ms / total_ms
+        self.playhead_pos = ratio * self.width()
         self.update()
 
-    def update_zoom(self, x):
-        center = int((x / max(self.width(), 1)) * self.total_samples)
-        win = int(self.total_samples * 0.12)
-        self.sel_start = max(0, center - win // 2)
-        self.sel_end = min(self.total_samples, self.sel_start + win)
-
     def mousePressEvent(self, event):
-        # LEFT CLICK → SNAP PLAYHEAD
-        if event.button() == Qt.MouseButton.LeftButton and self.peaks is not None:
-            x = event.pos().x()
-            rel = x / max(self.width(), 1)
-            peak_index = int(rel * self.total_samples)
-            parent = self.parent()
-            if parent is not None and hasattr(parent, "snap_to_position"):
-                parent.snap_to_position(peak_index)
+        if self.peaks is None or len(self.peaks) == 0:
             return
 
-        # RIGHT CLICK → TOGGLE ZOOM
-        if event.button() == Qt.MouseButton.RightButton and self.peaks is not None:
+        x = event.pos().x()
+
+        # LEFT CLICK → SNAP PLAYHEAD
+        if event.button() == Qt.MouseButton.LeftButton:
+            total_ms = (self.audio_len / self.sr) * 1000
+            ratio = x / max(self.width(), 1)
+            ms = ratio * total_ms
+            parent = self.parent()
+            if parent and hasattr(parent, "snap_to_ms"):
+                parent.snap_to_ms(ms)
+            return
+
+        # RIGHT CLICK → ZOOM TO REGION
+        if event.button() == Qt.MouseButton.RightButton:
             if not self.zoom_active:
                 self.zoom_active = True
-                self.update_zoom(event.pos().x())
+                center = int((x / self.width()) * self.total_peaks)
+                win = int(self.total_peaks * 0.15)
+                self.sel_start = max(0, center - win // 2)
+                self.sel_end = min(self.total_peaks, self.sel_start + win)
             else:
+                # Reset zoom
                 self.zoom_active = False
                 self.sel_start = 0
-                self.sel_end = self.total_samples
+                self.sel_end = self.total_peaks
+
+            self.hint_opacity = 1.0
             self.update()
 
     def mouseMoveEvent(self, event):
-        # Reset hint timer on movement
-        if self.hovering:
-            self.hint_lifetime = self.HINT_DURATION
-            self.hint_opacity = 1.0
-
         if self.zoom_active and self.peaks is not None:
-            self.update_zoom(event.pos().x())
+            x = event.pos().x()
+            center = int((x / self.width()) * self.total_peaks)
+            win = int(self.total_peaks * 0.15)
+            self.sel_start = max(0, center - win // 2)
+            self.sel_end = min(self.total_peaks, self.sel_start + win)
+            self.hint_opacity = 1.0
             self.update()
 
     def paintEvent(self, event):
@@ -345,36 +222,30 @@ class WaveformWidget(QWidget):
 
         p = QPainter(self)
         w, h = self.width(), self.height()
-        wf_h = h - self.axis_h
+        p.fillRect(self.rect(), QColor(13, 17, 23))
 
+        # Determine visible region
         start = self.sel_start if self.zoom_active else 0
-        end = self.sel_end if self.zoom_active else self.total_samples
+        end = self.sel_end if self.zoom_active else self.total_peaks
         visible = self.peaks[start:end]
 
-        # Waveform background
-        p.fillRect(0, 0, w, wf_h, QColor(10, 10, 12))
-
-        # Peaks
+        # Draw waveform
         if len(visible) > 0:
             step = w / len(visible)
-            p.setPen(QPen(QColor(0, 255, 200, 170), 1))
+            p.setPen(QPen(QColor(0, 255, 200, 180), 1))
             for i, amp in enumerate(visible):
                 x = int(i * step)
-                line_h = int(amp * (wf_h / 2) * 0.9)
-                p.drawLine(x, wf_h // 2 - line_h, x, wf_h // 2 + line_h)
+                line_h = int(amp * (h * 0.8))
+                p.drawLine(x, h // 2 - line_h // 2, x, h // 2 + line_h // 2)
 
-        # Axis strip
-        p.fillRect(0, wf_h, w, self.axis_h, QColor(20, 20, 24))
-        p.setPen(QColor(230, 230, 230))
-        p.setFont(QFont("Consolas", 8))
-
-        # Time calculations
-        total_duration = self.audio_len / self.sr if self.sr > 0 else 0
-        start_time = (start / self.total_samples) * total_duration
-        end_time = (end / self.total_samples) * total_duration
+        # Time axis
+        p.setPen(QPen(QColor(0, 255, 200, 80), 1))
+        total_duration = self.audio_len / self.sr
+        start_time = (start / self.total_peaks) * total_duration
+        end_time = (end / self.total_peaks) * total_duration
         visible_duration = max(end_time - start_time, 1e-9)
 
-        # Adaptive ticks
+        # Adaptive tick spacing
         if visible_duration > 20:
             tick_step = 5.0
         elif visible_duration > 10:
@@ -384,237 +255,32 @@ class WaveformWidget(QWidget):
         else:
             tick_step = 0.5
 
-        current_tick = np.ceil(start_time / tick_step) * tick_step
-
-        while current_tick <= end_time + 1e-9:
-            rel_pos = (current_tick - start_time) / visible_duration
-            tx = int(rel_pos * w)
+        t = np.ceil(start_time / tick_step) * tick_step
+        while t <= end_time:
+            rel = (t - start_time) / visible_duration
+            tx = int(rel * w)
+            p.drawLine(tx, h - 20, tx, h)
+            p.setPen(QColor(200, 200, 200))
+            p.drawText(tx + 2, h - 5, f"{t:.1f}s")
             p.setPen(QPen(QColor(0, 255, 200, 80), 1))
-            p.drawLine(tx, wf_h, tx, h - 20)
+            t += tick_step
 
-            if current_tick % 1.0 == 0 or visible_duration < 2:
-                p.setPen(QColor(200, 200, 200))
-                p.drawText(tx + 2, h - 8, f"{current_tick:.1f}")
+        # Playhead
+        if start <= (self.playhead_pos / w) * self.total_peaks <= end:
+            p.setPen(QPen(Qt.GlobalColor.white, 2))
+            p.drawLine(int(self.playhead_pos), 0, int(self.playhead_pos), h)
 
-            current_tick += tick_step
-
-        # HOVER + FADE-OUT HINT
+        # Hint overlay
         if self.hint_opacity > 0:
             p.setOpacity(self.hint_opacity)
             p.setPen(QColor(200, 200, 210))
             p.setFont(QFont("Segoe UI", 9))
-            hint = "Left-click: Jump   |   Right-click: Zoom   |   Drag: Pan   |   Right-click again: Reset"
-            metrics = p.fontMetrics()
-            text_w = metrics.horizontalAdvance(hint)
-            p.drawText((w - text_w) // 2, wf_h + 18, hint)
+            hint = "Left-click: Jump | Right-click: Zoom | Drag: Pan | Right-click again: Reset"
+            tw = p.fontMetrics().horizontalAdvance(hint)
+            p.drawText((w - tw) // 2, 20, hint)
             p.setOpacity(1.0)
-
-        # Playhead
-        if start <= self.playhead_sample < end and end > start:
-            rel_x = (self.playhead_sample - start) / (end - start)
-            x = int(rel_x * w)
-            p.setPen(QPen(Qt.GlobalColor.white, 2))
-            p.drawLine(x, 0, x, wf_h)
 # ============================================================
-# MASTER ENGINE (AGI-aiPilotGEM-build 3.2)
-# ============================================================
-class AiCopilotReverseEngine(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("AGI-aiPilotGEM-build 3.2 | Reverse Engine")
-        self.setMinimumSize(1180, 820)
-
-        # CORE STATE
-        self.original_audio = None
-        self.current_audio = None
-        self.sr = 44100
-        self.stream = None
-        self.play_idx = 0
-
-        self.click_enabled = False
-        self.temp_dir = tempfile.mkdtemp(prefix="AICOPILOT_DRE_")
-
-        self.play_timer = QTimer()
-        self.play_timer.timeout.connect(self.update_playhead)
-
-        self.click_timer = QTimer()
-        self.click_timer.timeout.connect(self.play_click)
-
-        # Metronome click
-        t = np.linspace(0, 0.03, int(44100 * 0.03))
-        self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.5).astype(np.float32)
-
-        self.init_ui()
-        self.apply_theme()
-
-    def init_ui(self):
-        root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(10)
-
-        # TOP BAR
-        top = QHBoxLayout()
-        self.load_btn = StyledButton("LOAD SOURCE")
-        self.load_btn.clicked.connect(self.load_file)
-
-        self.reset_btn = StyledButton("RESET TO ORIGIN", accent="#ff6b8b")
-        self.reset_btn.clicked.connect(self.reset_audio)
-        self.reset_btn.setEnabled(False)
-
-        self.clean_btn = StyledButton("CLEAN CACHE", accent="#ffaa33")
-        self.clean_btn.clicked.connect(self.manual_cleanup)
-
-        self.file_info = QLineEdit("System idle. Awaiting audio source.")
-        self.file_info.setReadOnly(True)
-
-        top.addWidget(self.load_btn)
-        top.addWidget(self.reset_btn)
-        top.addWidget(self.clean_btn)
-        top.addWidget(self.file_info, 1)
-        root.addLayout(top)
-
-        # TEMPO GRID
-        tempo_grid = QGridLayout()
-        tempo_grid.setHorizontalSpacing(10)
-        tempo_grid.setVerticalSpacing(4)
-
-        self.guessed_bpm = QLineEdit("")
-        self.guessed_bpm.setReadOnly(True)
-
-        self.manual_bpm = QLineEdit("120.0")
-        self.manual_bpm.editingFinished.connect(self.bpm_changed)
-
-        tempo_grid.addWidget(AccentLabel("AUTO-DETECTED"), 0, 0)
-        tempo_grid.addWidget(self.guessed_bpm, 0, 1)
-        tempo_grid.addWidget(AccentLabel("MANUAL INPUT"), 0, 2)
-        tempo_grid.addWidget(self.manual_bpm, 0, 3)
-
-        tempo_ctrls = QHBoxLayout()
-        half_btn = StyledButton("½")
-        half_btn.clicked.connect(lambda ch=False, f=0.5: self.scale_bpm(f))
-        dbl_btn = StyledButton("2x")
-        dbl_btn.clicked.connect(lambda ch=False, f=2.0: self.scale_bpm(f))
-        tempo_ctrls.addWidget(half_btn)
-        tempo_ctrls.addWidget(dbl_btn)
-
-        self.click_btn = StyledButton("METRONOME: OFF", accent="#00ffc8")
-        self.click_btn.clicked.connect(self.toggle_metronome)
-        tempo_ctrls.addWidget(self.click_btn)
-
-        tempo_grid.addLayout(tempo_ctrls, 0, 4)
-        root.addLayout(tempo_grid)
-
-        # VISUAL STRIP
-        self.sweep = TempoSweepIndicator()
-        root.addWidget(self.sweep)
-
-        # WAVEFORM
-        self.waveform = WaveformWidget()
-        root.addWidget(self.waveform, 1)
-
-        # MODES
-        modes = QHBoxLayout()
-        modes.setSpacing(8)
-        mode_labels = [
-            ("TRUE_REVERSE", "#00ffc8"),
-            ("HQ_REVERSE", "#4dd2ff"),
-            ("TATUM_REVERSE", "#ffb347"),
-            ("STUDIO_MODE", "#ff6b8b"),
-        ]
-        for mode, color in mode_labels:
-            btn = StyledButton(mode.replace("_", " "), accent=color)
-            btn.clicked.connect(lambda ch=False, m=mode: self.apply_reverse(m))
-            modes.addWidget(btn)
-        root.addLayout(modes)
-
-        # TRANSPORT
-        transport = QHBoxLayout()
-        self.play_btn = StyledButton("START ENGINE", accent="#00ffc8")
-        self.play_btn.clicked.connect(self.play_audio)
-
-        self.stop_btn = StyledButton("STOP", accent="#ff6b8b")
-        self.stop_btn.clicked.connect(self.stop_audio)
-
-        self.save_btn = StyledButton("EXPORT MASTER", accent="#ffffff")
-        self.save_btn.clicked.connect(self.save_file)
-
-        transport.addWidget(self.play_btn)
-        transport.addWidget(self.stop_btn)
-        transport.addWidget(self.save_btn)
-        root.addLayout(transport)
-
-        # LOG
-        self.log = QTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setMinimumHeight(160)
-        root.addWidget(self.log)
-
-    def apply_theme(self):
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #050608;
-                color: #e6e6e6;
-                font-family: 'Segoe UI';
-                font-size: 10pt;
-            }
-            QLineEdit {
-                background-color: #050509;
-                border: 1px solid #2a2a33;
-                border-radius: 4px;
-                padding: 6px;
-                color: #00ffc8;
-                font-family: 'Consolas';
-                font-size: 10pt;
-            }
-            QTextEdit {
-                background-color: #050507;
-                border: 1px solid #1b1b22;
-                border-radius: 4px;
-                color: #9fe8ff;
-                font-family: 'Consolas';
-                font-size: 10px;
-            }
-        """)
-
-    def log_manual_tempo(self):
-        self.log.append(f"[USER] Manual Tempo Update → {self.manual_bpm.text()} BPM")
-
-    def bpm_changed(self):
-        """Restart metronome and log when BPM field is edited."""
-        self.log_manual_tempo()
-        try:
-            bpm = float(self.manual_bpm.text())
-            if self.click_enabled:
-                self.click_timer.stop()
-                self.click_timer.                background-color: #141414;
-                color: {accent};
-                border-radius: 4px;
-                border: 1px solid #333;
-                padding: 8px 14px;
-                font-family: 'Segoe UI Semibold';
-                letter-spacing: 0.5px;
-            }}
-            QPushButton:hover {{
-                border-color: {accent};
-                background-color: #1f1f1f;
-            }}
-            QPushButton:pressed {{
-                background-color: #0b0b0b;
-            }}
-            QPushButton:disabled {{
-                color: #555;
-                border-color: #222;
-                background-color: #101010;
-            }}
-        """)
-
-class AccentLabel(QLabel):
-    def __init__(self, text, color="#9fa4b8", parent=None):
-        super().__init__(text, parent)
-        self.setStyleSheet(f"color: {color}; font-family: 'Segoe UI'; font-size: 10pt;")
-
-# ============================================================
-# WORKERS (UNCHANGED CORE BEHAVIOR, SAFETY-PATCHED)
+# WORKERS
 # ============================================================
 class TempoWorker(QThread):
     tempo_ready = pyqtSignal(float)
@@ -628,12 +294,16 @@ class TempoWorker(QThread):
         try:
             y = self.audio
             if y.ndim > 1:
-                y = y.mean(axis=1)
+                y = y.mean(axis=0)
             if len(y) < 2048:
                 self.tempo_ready.emit(120.0)
                 return
-            tempo, _ = librosa.beat.beat_track(y=y.astype(np.float32), sr=self.sr)
-            val = float(tempo[0] if isinstance(tempo, np.ndarray) else tempo)
+            onset_env = librosa.onset.onset_strength(y=y.astype(np.float32), sr=self.sr)
+            tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=self.sr, aggregate=None)
+            if hasattr(tempo, "__len__"):
+                val = float(tempo[0])
+            else:
+                val = float(tempo)
             self.tempo_ready.emit(val if val > 0 else 120.0)
         except Exception:
             self.tempo_ready.emit(120.0)
@@ -642,501 +312,244 @@ class TempoWorker(QThread):
 class ReverseWorker(QThread):
     finished = pyqtSignal(np.ndarray, str)
 
-    def __init__(self, audio, sr, mode, tempo, parent=None):
+    def __init__(self, audio, sr, mode, tempo, grid_params, parent=None):
         super().__init__(parent)
         self.params = {
             "audio": audio,
             "sample_rate": sr,
             "mode": mode,
-            "tempo": tempo
+            "tempo": tempo,
+            **grid_params,
         }
 
     def run(self):
         try:
-            # External pipeline hook (same contract as your build)
             from core.hybrid.pipeline import process_audio
             processed = process_audio(**self.params)
             self.finished.emit(processed, self.params["mode"])
-        except Exception:
-            # Fallback for standalone testing or missing pipeline
+        except Exception as e:
+            print("PIPELINE ERROR:", e)
             self.finished.emit(self.params["audio"], "ERROR_FALLBACK")
 
 # ============================================================
-# VISUAL COMPONENTS (TIME RULER + UPGRADED SWEEP)
+# MAIN APPLICATION: "VIRTUAL STUDIO 3.2"
 # ============================================================
-class TempoSweepIndicator(QWidget):
-    """
-    aiCOPILOT variant:
-    - Slightly softer palette
-    - BPM-sensitive sweep speed
-    """
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.num_cells = 40
-        self.bpm = 120.0
-        self.phase = 0.0
-        self.last_time = time.time()
-        self.timer = QTimer(self)
-        self.timer.setInterval(20)
-        self.timer.timeout.connect(self.update_phase)
-        self.setFixedHeight(52)
-        self.color_palette = [
-            QColor(0, 255, 200),
-            QColor(0, 180, 255),
-            QColor(255, 120, 80)
-        ]
-        self.current_color = self.color_palette[0]
-
-    def set_bpm(self, bpm_str):
-        try:
-            val = float(bpm_str)
-            self.bpm = val if val > 0 else 120.0
-        except Exception:
-            self.bpm = 120.0
-
-    def start(self):
-        self.last_time = time.time()
-        if not self.timer.isActive():
-            self.timer.start()
-
-    def stop(self):
-        self.timer.stop()
-        self.phase = 0.0
-        self.update()
-
-    def update_phase(self):
-        now = time.time()
-        dt = now - self.last_time
-        self.last_time = now
-        # Slightly faster at higher BPM, slower at low BPM
-        period = (60.0 / max(self.bpm, 1.0)) * 1.3
-        self.phase = (self.phase + dt / period) % 1.0
-        self.update()
-
-    def paintEvent(self, event):
-        p = QPainter(self)
-        p.fillRect(self.rect(), QColor(8, 8, 10))
-        cell_w = self.width() / self.num_cells
-        center_idx = self.phase * self.num_cells
-
-        for i in range(self.num_cells):
-            dist = abs(i - center_idx)
-            bright = max(0.0, 1.0 - (dist / 7.0)) ** 2.2
-            c = QColor(self.current_color)
-            c.setAlpha(int(255 * bright))
-            p.fillRect(
-                int(i * cell_w + 1),
-                6,
-                int(cell_w - 2),
-                self.height() - 12,
-                c
-            )
-
-
-class WaveformWidget(QWidget):
-    """
-    Precision build:
-    - Peak-based waveform
-    - High-accuracy sub-second Time axis
-    - Playhead
-    - Simple zoom window on hover/drag
-    """
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.peaks = None
-        self.sr = 44100
-        self.audio_len = 0
-        self.playhead_sample = 0
-        self.zoom_active = False
-        self.sel_start = 0
-        self.sel_end = 0
-        self.axis_h = 45
-        self.setMinimumHeight(220)
-        self.setMouseTracking(True)
-
-    def set_waveform(self, audio, sr):
-        self.sr = sr
-        self.audio_len = len(audio)
-        pixels = max(600, self.width() or 1200)
-        step = max(1, len(audio) // pixels)
-        self.peaks = np.array([
-            np.max(np.abs(audio[i:i + step]))
-            for i in range(0, len(audio), step)
-        ])
-        self.total_samples = len(self.peaks)
-        self.update()
-
-    def set_position_ms(self, ms):
-        if self.audio_len == 0:
-            return
-        ratio = (ms / 1000.0) / (self.audio_len / self.sr)
-        self.playhead_sample = int(ratio * self.total_samples)
-        self.update()
-
-    def update_zoom(self, x):
-        center = int((x / max(self.width(), 1)) * self.total_samples)
-        win = int(self.total_samples * 0.12)
-        self.sel_start = max(0, center - win // 2)
-        self.sel_end = min(self.total_samples, self.sel_start + win)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.peaks is not None:
-            self.zoom_active = True
-            self.update_zoom(event.pos().x())
-
-    def mouseMoveEvent(self, event):
-        if self.zoom_active:
-            self.update_zoom(event.pos().x())
-        self.update()
-
-    def mouseReleaseEvent(self, event):
-        self.zoom_active = False
-        self.update()
-
-    def paintEvent(self, event):
-        if self.peaks is None:
-            return
-
-        p = QPainter(self)
-        w, h = self.width(), self.height()
-        wf_h = h - self.axis_h
-
-        start = self.sel_start if self.zoom_active else 0
-        end = self.sel_end if self.zoom_active else self.total_samples
-        visible = self.peaks[start:end]
-
-        # Waveform background
-        p.fillRect(0, 0, w, wf_h, QColor(10, 10, 12))
-
-        if len(visible) > 0:
-            step = w / len(visible)
-            p.setPen(QPen(QColor(0, 255, 200, 170), 1))
-            for i, amp in enumerate(visible):
-                x = int(i * step)
-                line_h = int(amp * (wf_h / 2) * 0.9)
-                p.drawLine(x, wf_h // 2 - line_h, x, wf_h // 2 + line_h)
-
-        # Axis strip
-        p.fillRect(0, wf_h, w, self.axis_h, QColor(20, 20, 24))
-        p.setPen(QColor(230, 230, 230))
-        p.setFont(QFont("Consolas", 8))
-
-        # --- HIGH ACCURACY TIME CALCULATIONS ---
-        total_duration = self.audio_len / self.sr if self.sr > 0 else 0
-        start_time = (start / self.total_samples) * total_duration
-        end_time = (end / self.total_samples) * total_duration
-        visible_duration = end_time - start_time
-
-        # Draw ticks every 1 second or 0.1 second depending on zoom
-        tick_step = 1.0 if visible_duration > 5 else 0.1
-        current_tick = np.ceil(start_time / tick_step) * tick_step
-        
-        while current_tick <= end_time:
-            rel_pos = (current_tick - start_time) / (visible_duration if visible_duration > 0 else 1)
-            tx = int(rel_pos * w)
-            p.setPen(QPen(QColor(0, 255, 200, 80), 1))
-            p.drawLine(tx, wf_h, tx, h - 20)
-            
-            # Label every major second or if zoomed in enough
-            if current_tick % 1.0 == 0 or visible_duration < 2:
-                p.setPen(QColor(200, 200, 200))
-                p.drawText(tx + 2, h - 8, f"{current_tick:.0f}")
-            
-            current_tick += tick_step
-
-        # Playhead
-        if start <= self.playhead_sample < end and end > start:
-            rel_x = (self.playhead_sample - start) / (end - start)
-            x = int(rel_x * w)
-            p.setPen(QPen(Qt.GlobalColor.white, 2))
-            p.drawLine(x, 0, x, wf_h)
-
-# ============================================================
-# MASTER ENGINE (AGI-aiPilotGEM-build 3.2)
-# ============================================================
-class AiCopilotReverseEngine(QWidget):
+class CyberReverseEngine(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AGI-aiPilotGEM-build 3.2 | Reverse Engine")
-        self.setMinimumSize(1180, 820)
+        self.setWindowTitle("AGI-aiPilotGEM // REVERSE ENGINE v3.2")
+        self.resize(1200, 850)
 
-        # CORE STATE
+        # Shared Audio State
         self.original_audio = None
         self.current_audio = None
         self.sr = 44100
         self.stream = None
         self.play_idx = 0
+        self.temp_dir = tempfile.mkdtemp()
 
+        # Metronome
         self.click_enabled = False
-        self.temp_dir = tempfile.mkdtemp(prefix="AICOPILOT_DRE_")
-
-        self.play_timer = QTimer()
-        self.play_timer.timeout.connect(self.update_playhead)
-
         self.click_timer = QTimer()
         self.click_timer.timeout.connect(self.play_click)
-
-        # Metronome click
         t = np.linspace(0, 0.03, int(44100 * 0.03))
         self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.5).astype(np.float32)
+
+        # Playback timer
+        self.play_timer = QTimer()
+        self.play_timer.timeout.connect(self.sync_ui)
 
         self.init_ui()
         self.apply_theme()
 
     def init_ui(self):
-        root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(10)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(15)
 
-        # TOP BAR
-        top = QHBoxLayout()
-        self.load_btn = StyledButton("LOAD SOURCE")
+        # --- ROW 1: FILE OPERATIONS POD ---
+        file_pod = ControlPod("Source Input")
+        file_layout = QHBoxLayout()
+        self.load_btn = CyberButton("Import Wave", "#58a6ff")
         self.load_btn.clicked.connect(self.load_file)
+        self.file_path_display = QLineEdit("NO_FILE_LOADED")
+        self.file_path_display.setReadOnly(True)
+        file_layout.addWidget(self.load_btn)
+        file_layout.addWidget(self.file_path_display, 1)
+        file_pod.layout.addLayout(file_layout)
+        main_layout.addWidget(file_pod)
 
-        self.reset_btn = StyledButton("RESET TO ORIGIN", accent="#ff6b8b")
+        # --- ROW 2: CENTER WORKSPACE (VISUALS & SETTINGS) ---
+        center_layout = QHBoxLayout()
+
+        # Visualization Side
+        vis_layout = QVBoxLayout()
+        self.sweep = SweepIndicator()
+        self.waveform = NeonWaveform()
+        vis_layout.addWidget(self.sweep)
+        vis_layout.addWidget(self.waveform, 1)
+        center_layout.addLayout(vis_layout, 3)
+
+        # Math Side (Grid Settings Pod)
+        math_pod = ControlPod("Grid Logic")
+        math_pod.setFixedWidth(280)
+        m_grid = QGridLayout()
+
+        m_grid.addWidget(QLabel("BPM:"), 0, 0)
+        self.bpm_in = QLineEdit("120")
+        m_grid.addWidget(self.bpm_in, 0, 1)
+
+        m_grid.addWidget(QLabel("BARS:"), 1, 0)
+        self.bars_in = QLineEdit("1")
+        m_grid.addWidget(self.bars_in, 1, 1)
+
+        m_grid.addWidget(QLabel("BEATS:"), 2, 0)
+        self.beats_in = QLineEdit("4")
+        m_grid.addWidget(self.beats_in, 2, 1)
+
+        m_grid.addWidget(QLabel("TATUM:"), 3, 0)
+        self.tatum_in = QLineEdit("16")
+        m_grid.addWidget(self.tatum_in, 3, 1)
+
+        math_pod.layout.addLayout(m_grid)
+
+        # Metronome toggle
+        self.metro_btn = CyberButton("Metronome: OFF", "#00ffc8")
+        self.metro_btn.clicked.connect(self.toggle_metronome)
+        math_pod.layout.addWidget(self.metro_btn)
+
+        math_pod.layout.addStretch()
+
+        self.reset_btn = CyberButton("Clear Buffer", "#ff6b8b")
         self.reset_btn.clicked.connect(self.reset_audio)
-        self.reset_btn.setEnabled(False)
+        math_pod.layout.addWidget(self.reset_btn)
 
-        self.clean_btn = StyledButton("CLEAN CACHE", accent="#ffaa33")
-        self.clean_btn.clicked.connect(self.manual_cleanup)
+        center_layout.addWidget(math_pod)
+        main_layout.addLayout(center_layout)
 
-        self.file_info = QLineEdit("System idle. Awaiting audio source.")
-        self.file_info.setReadOnly(True)
+        # --- ROW 3: EXTRACTION MODES ---
+        mode_pod = ControlPod("Extraction Algorithms")
+        modes_layout = QHBoxLayout()
 
-        top.addWidget(self.load_btn)
-        top.addWidget(self.reset_btn)
-        top.addWidget(self.clean_btn)
-        top.addWidget(self.file_info, 1)
-        root.addLayout(top)
+        btn_true = CyberButton("Standard Rev", "#d2a8ff")
+        btn_hq = CyberButton("High Fidelity", "#00ffc8")
+        btn_tatum = CyberButton("Tatum Logic", "#ff7b72")
+        btn_studio = CyberButton("Studio Shuf", "#79c0ff")
 
-        # TEMPO GRID
-        tempo_grid = QGridLayout()
-        tempo_grid.setHorizontalSpacing(10)
-        tempo_grid.setVerticalSpacing(4)
+        btn_true.clicked.connect(lambda: self.trigger_process("TRUE_REVERSE"))
+        btn_hq.clicked.connect(lambda: self.trigger_process("HQ_REVERSE"))
+        btn_tatum.clicked.connect(lambda: self.trigger_process("TATUM_REVERSE"))
+        btn_studio.clicked.connect(lambda: self.trigger_process("STUDIO_MODE"))
 
-        self.guessed_bpm = QLineEdit("")
-        self.guessed_bpm.setReadOnly(True)
+        modes_layout.addWidget(btn_true)
+        modes_layout.addWidget(btn_hq)
+        modes_layout.addWidget(btn_tatum)
+        modes_layout.addWidget(btn_studio)
+        mode_pod.layout.addLayout(modes_layout)
+        main_layout.addWidget(mode_pod)
 
-        self.manual_bpm = QLineEdit("120.0")
-        self.manual_bpm.editingFinished.connect(self.log_manual_tempo)
+        # --- ROW 4: TRANSPORT & LOGS ---
+        bottom_layout = QHBoxLayout()
 
-        tempo_grid.addWidget(AccentLabel("AUTO-DETECTED"), 0, 0)
-        tempo_grid.addWidget(self.guessed_bpm, 0, 1)
-        tempo_grid.addWidget(AccentLabel("MANUAL INPUT"), 0, 2)
-        tempo_grid.addWidget(self.manual_bpm, 0, 3)
-
-        tempo_ctrls = QHBoxLayout()
-        half_btn = StyledButton("½")
-        half_btn.clicked.connect(lambda ch=False, f=0.5: self.scale_bpm(f))
-        dbl_btn = StyledButton("2x")
-        dbl_btn.clicked.connect(lambda ch=False, f=2.0: self.scale_bpm(f))
-        tempo_ctrls.addWidget(half_btn)
-        tempo_ctrls.addWidget(dbl_btn)
-
-        self.click_btn = StyledButton("METRONOME: OFF", accent="#00ffc8")
-        self.click_btn.clicked.connect(self.toggle_metronome)
-        tempo_ctrls.addWidget(self.click_btn)
-
-        tempo_grid.addLayout(tempo_ctrls, 0, 4)
-        root.addLayout(tempo_grid)
-
-        # VISUAL STRIP
-        self.sweep = TempoSweepIndicator()
-        root.addWidget(self.sweep)
-
-        # WAVEFORM
-        self.waveform = WaveformWidget()
-        root.addWidget(self.waveform, 1)
-
-        # MODES
-        modes = QHBoxLayout()
-        modes.setSpacing(8)
-        mode_labels = [
-            ("TRUE_REVERSE", "#00ffc8"),
-            ("HQ_REVERSE", "#4dd2ff"),
-            ("TATUM_REVERSE", "#ffb347"),
-            ("STUDIO_MODE", "#ff6b8b"),
-        ]
-        for mode, color in mode_labels:
-            btn = StyledButton(mode.replace("_", " "), accent=color)
-            btn.clicked.connect(lambda ch=False, m=mode: self.apply_reverse(m))
-            modes.addWidget(btn)
-        root.addLayout(modes)
-
-        # TRANSPORT
-        transport = QHBoxLayout()
-        self.play_btn = StyledButton("START ENGINE", accent="#00ffc8")
-        self.play_btn.clicked.connect(self.play_audio)
-
-        self.stop_btn = StyledButton("STOP", accent="#ff6b8b")
-        self.stop_btn.clicked.connect(self.stop_audio)
-
-        self.save_btn = StyledButton("EXPORT MASTER", accent="#ffffff")
+        # Transport
+        transport_pod = ControlPod("Master Transport")
+        t_layout = QHBoxLayout()
+        self.play_btn = CyberButton("Initialize Playback", "#afff33")
+        self.play_btn.clicked.connect(self.toggle_play)
+        self.save_btn = CyberButton("Export Master", "#f2f2f2")
         self.save_btn.clicked.connect(self.save_file)
+        t_layout.addWidget(self.play_btn)
+        t_layout.addWidget(self.save_btn)
+        transport_pod.layout.addLayout(t_layout)
 
-        transport.addWidget(self.play_btn)
-        transport.addWidget(self.stop_btn)
-        transport.addWidget(self.save_btn)
-        root.addLayout(transport)
-
-        # LOG
+        # Logs
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        self.log.setMinimumHeight(160)
-        root.addWidget(self.log)
+        self.log.setFixedHeight(100)
+
+        bottom_layout.addWidget(transport_pod, 1)
+        bottom_layout.addWidget(self.log, 1)
+        main_layout.addLayout(bottom_layout)
 
     def apply_theme(self):
         self.setStyleSheet("""
             QWidget {
-                background-color: #050608;
-                color: #e6e6e6;
-                font-family: 'Segoe UI';
-                font-size: 10pt;
+                background-color: #010409;
+                color: #c9d1d9;
+                font-family: 'Consolas', 'Courier New';
             }
+            QLabel { font-size: 8pt; color: #8b949e; }
             QLineEdit {
-                background-color: #050509;
-                border: 1px solid #2a2a33;
+                background-color: #0d1117;
+                border: 1px solid #30363d;
+                color: #58a6ff;
+                padding: 4px;
                 border-radius: 4px;
-                padding: 6px;
-                color: #00ffc8;
-                font-family: 'Consolas';
-                font-size: 10pt;
             }
             QTextEdit {
-                background-color: #050507;
-                border: 1px solid #1b1b22;
-                border-radius: 4px;
-                color: #9fe8ff;
-                font-family: 'Consolas';
-                font-size: 10px;
+                background-color: #0d1117;
+                border: 1px solid #30363d;
+                color: #d2a8ff;
+                font-size: 8pt;
             }
         """)
 
-    def log_manual_tempo(self):
-        self.log.append(f"[USER] Manual Tempo Update → {self.manual_bpm.text()} BPM")
-
-    def scale_bpm(self, factor):
-        try:
-            old_val = float(self.manual_bpm.text())
-            new_val = old_val * factor
-            self.manual_bpm.setText(f"{new_val:.2f}")
-            self.log.append(f"[USER] Tempo scaled {factor}x: {old_val:.2f} → {new_val:.2f} BPM")
-            if self.click_enabled:
-                self.click_timer.stop()
-                self.click_timer.start(int(60000 / new_val))
-        except Exception:
-            self.log.append("[SAFETY] Invalid BPM scaling input.")
-
+    # --------------------------------------------------------
+    # FUNCTIONALITY
+    # --------------------------------------------------------
     def load_file(self):
         path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open Audio",
-            "",
-            "Audio Files (*.wav *.mp3 *.flac)"
+            self, "Select Audio", "", "Audio (*.wav *.mp3 *.flac)"
         )
         if not path:
             return
-
-        self.log.append(f"[FILE] Loading: {os.path.basename(path)}")
         y, sr = librosa.load(path, sr=None, mono=False)
-
         self.original_audio = y.T if y.ndim > 1 else y
         self.current_audio = self.original_audio.copy()
         self.sr = sr
+        self.file_path_display.setText(os.path.basename(path))
 
         vis = y.mean(axis=0) if y.ndim > 1 else y
         self.waveform.set_waveform(vis, sr)
+        self.log.append(f"[INIT] Loaded {path}")
 
-        self.file_info.setText(os.path.basename(path))
-        self.reset_btn.setEnabled(True)
-
-        self.worker = TempoWorker(y, sr)
-        self.worker.tempo_ready.connect(self.on_tempo_detected)
-        self.worker.start()
+        # Optional: auto tempo detection
+        self.log.append("[ENGINE] Detecting BPM…")
+        self.tempo_worker = TempoWorker(y, sr)
+        self.tempo_worker.tempo_ready.connect(self.on_tempo_detected)
+        self.tempo_worker.start()
 
     def on_tempo_detected(self, bpm):
-        self.guessed_bpm.setText(f"{bpm:.2f}")
-        self.manual_bpm.setText(f"{bpm:.2f}")
-        self.log.append(f"[ENGINE] Detected Tempo: {bpm:.2f} BPM")
+        self.bpm_in.setText(f"{bpm:.2f}")
+        self.sweep.set_bpm(bpm)
+        self.log.append(f"[ENGINE] Detected BPM: {bpm:.2f}")
 
-    def toggle_metronome(self):
-        self.click_enabled = not self.click_enabled
-        self.click_btn.setText(f"METRONOME: {'ON' if self.click_enabled else 'OFF'}")
-        if self.click_enabled:
-            try:
-                bpm = float(self.manual_bpm.text())
-                self.click_timer.start(int(60000 / bpm))
-                self.log.append(f"[SYSTEM] Metronome active at {bpm:.2f} BPM")
-            except Exception:
-                self.log.append("[SAFETY] Metronome failed: Enter valid BPM.")
-                self.click_enabled = False
-        else:
-            self.click_timer.stop()
-
-    def play_click(self):
-        sd.play(self.click_buffer, 44100)
-
-    def play_audio(self):
+    def trigger_process(self, mode):
         if self.current_audio is None:
-            self.log.append("[SAFETY] Playback blocked: LOAD SOURCE first.")
+            self.log.append("[WARN] No buffer loaded.")
             return
-
-        self.stop_audio()
-        self.play_idx = 0
-
-        chs = self.current_audio.shape[1] if self.current_audio.ndim > 1 else 1
-        self.stream = sd.OutputStream(
-            samplerate=self.sr,
-            channels=chs,
-            callback=self.audio_callback
-        )
-        self.stream.start()
-        self.play_timer.start(25)
-
-        self.sweep.set_bpm(self.manual_bpm.text())
-        self.sweep.start()
-        self.log.append("[ENGINE] Playback stream initiated.")
-
-    def audio_callback(self, outdata, frames, time_info, status):
-        chunk = self.current_audio[self.play_idx:self.play_idx + frames]
-        if len(chunk) < frames:
-            outdata[:len(chunk)] = chunk
-            outdata[len(chunk):].fill(0)
-            self.play_idx = 0
-            raise sd.CallbackStop()
-        else:
-            outdata[:] = chunk
-            self.play_idx += frames
-
-    def stop_audio(self):
-        self.play_timer.stop()
-        self.sweep.stop()
-        if self.stream:
-            self.stream.stop()
-            self.stream.close()
-            self.stream = None
-        self.waveform.set_position_ms(0)
-
-    def update_playhead(self):
-        if self.stream and self.stream.active:
-            ms = (self.play_idx / self.sr) * 1000
-            self.waveform.set_position_ms(ms)
-
-    def apply_reverse(self, mode):
-        if self.current_audio is None:
-            self.log.append(f"[SAFETY] {mode} blocked: LOAD SOURCE first.")
-            return
-
-        bpm_val = self.manual_bpm.text()
-        self.log.append("── RENDER START ──")
-        self.log.append(f"[CONFIG] Mode: {mode} | BPM Grid: {bpm_val}")
 
         try:
-            tempo = float(bpm_val)
-        except Exception:
-            tempo = 120.0
+            tempo = float(self.bpm_in.text())
+            bars = int(self.bars_in.text())
+            beats = int(self.beats_in.text())
+            tatum = int(self.tatum_in.text())
+        except ValueError:
+            self.log.append("[ERROR] Invalid grid or tempo values.")
+            return
 
-        self.rev_worker = ReverseWorker(self.current_audio, self.sr, mode, tempo)
+        grid_params = {
+            "bars_per_slice": bars,
+            "beats_per_bar": beats,
+            "tatum_fraction": tatum,
+        }
+
+        self.log.append(
+            f"[COMPUTE] {mode} | BPM={tempo:.2f} | bars={bars}, beats={beats}, tatum={tatum}"
+        )
+
+        self.rev_worker = ReverseWorker(
+            self.current_audio, self.sr, mode, tempo, grid_params
+        )
         self.rev_worker.finished.connect(self.on_rev_done)
         self.rev_worker.start()
 
@@ -1144,55 +557,220 @@ class AiCopilotReverseEngine(QWidget):
         self.current_audio = audio
         vis = audio.T.mean(axis=0) if audio.ndim > 1 else audio
         self.waveform.set_waveform(vis, self.sr)
-
         if mode == "ERROR_FALLBACK":
-            self.log.append("[WARN] Reverse pipeline failed. Original buffer preserved.")
+            self.log.append("[FAIL] DSP pipeline failed, fallback buffer used.")
         else:
-            self.log.append(f"[SUCCESS] {mode} completed at {self.manual_bpm.text()} BPM.")
-        self.log.append("──────────────────")
+            self.log.append(f"[DONE] {mode} Applied.")
 
+    # --------------------------------------------------------
+    # METRONOME
+    # --------------------------------------------------------
+    def toggle_metronome(self):
+        self.click_enabled = not self.click_enabled
+        if self.click_enabled:
+            try:
+                bpm = float(self.bpm_in.text())
+                interval = int(60000 / max(bpm, 1.0))
+                self.click_timer.start(interval)
+                self.metro_btn.setText("Metronome: ON")
+                self.log.append(f"[METRO] ON @ {bpm:.2f} BPM")
+            except Exception:
+                self.log.append("[METRO] Invalid BPM; metronome disabled.")
+                self.click_enabled = False
+                self.metro_btn.setText("Metronome: OFF")
+        else:
+            self.click_timer.stop()
+            self.metro_btn.setText("Metronome: OFF")
+            self.log.append("[METRO] OFF")
+
+    def play_click(self):
+        sd.play(self.click_buffer, 44100)
+
+    # --------------------------------------------------------
+    # PLAYBACK
+    # --------------------------------------------------------
+    def toggle_play(self):
+        # --- STOP PLAYBACK ---
+        if self.stream is not None and self.stream.active:
+            try:
+                self.stream.stop()
+                self.stream.close()
+            except Exception:
+                pass
+
+            self.stream = None
+            self.play_timer.stop()
+
+            # Auto-stop sweep indicator
+            self.sweep.timer.stop()
+            self.sweep.progress = 0.0
+            self.sweep.update()
+
+            self.play_btn.setText("Initialize Playback")
+            return
+
+        # --- START PLAYBACK ---
+        if self.current_audio is None:
+            return
+
+        self.play_idx = 0
+        audio = self.current_audio
+
+        # Determine channel count
+        chs = 1 if audio.ndim == 1 else audio.shape[1]
+
+        # Start audio stream
+        self.stream = sd.OutputStream(
+            samplerate=self.sr,
+            channels=chs,
+            callback=self.audio_callback,
+        )
+        self.stream.start()
+
+        # UI sync timer
+        self.play_timer.start(30)
+
+        # Auto-start sweep indicator with BPM
+        try:
+            bpm = float(self.bpm_in.text())
+            self.sweep.set_bpm(bpm)
+        except Exception:
+            pass
+        self.sweep.timer.start()
+
+        self.play_btn.setText("Cease Playback")
+
+
+    def audio_callback(self, outdata, frames, time_info, status):
+        audio = self.current_audio
+        n = len(audio)
+
+        start = self.play_idx
+        end = min(start + frames, n)
+
+        # MONO
+        if audio.ndim == 1:
+            chunk = audio[start:end]
+            if len(chunk) < frames:
+                outdata[:len(chunk), 0] = chunk
+                outdata[len(chunk):].fill(0)
+                self.play_idx = 0
+                raise sd.CallbackStop()
+            else:
+                outdata[:, 0] = chunk
+                if outdata.shape[1] > 1:
+                    outdata[:, 1:] = 0
+                self.play_idx = end
+
+        # MULTICHANNEL
+        else:
+            chunk = audio[start:end, :]
+            if len(chunk) < frames:
+                outdata[:len(chunk)] = chunk
+                outdata[len(chunk):].fill(0)
+                self.play_idx = 0
+                raise sd.CallbackStop()
+            else:
+                outdata[:] = chunk
+                self.play_idx = end
+
+
+    def sync_ui(self):
+        if self.current_audio is None or self.sr <= 0:
+            return
+
+        # Update waveform playhead
+        ms = (self.play_idx / self.sr) * 1000.0
+        self.waveform.update_playhead(ms)
+
+        # Keep sweep BPM synced
+        try:
+            bpm = float(self.bpm_in.text())
+            self.sweep.set_bpm(bpm)
+        except Exception:
+            pass
+
+
+    def snap_to_ms(self, ms):
+        """Called by NeonWaveform on click to snap playback and playhead."""
+        if self.current_audio is None or self.sr <= 0:
+            return
+
+        # Clamp MS
+        total_ms = (len(self.current_audio) / self.sr) * 1000.0
+        ms = max(0.0, min(total_ms, ms))
+
+        # Convert ms → sample index
+        sample_pos = int((ms / 1000.0) * self.sr)
+        self.play_idx = max(0, min(sample_pos, len(self.current_audio) - 1))
+
+        # Update waveform playhead
+        self.waveform.update_playhead(ms)
+
+        # Keep sweep synced if playing
+        if self.stream is not None and self.stream.active:
+            try:
+                bpm = float(self.bpm_in.text())
+                self.sweep.set_bpm(bpm)
+            except Exception:
+                pass
+            if not self.sweep.timer.isActive():
+                self.sweep.timer.start()
+        else:
+            # Freeze sweep when not playing
+            self.sweep.timer.stop()
+            self.sweep.progress = 0.0
+            self.sweep.update()
+
+        self.log.append(f"[NAV] Snapped to {ms/1000.0:.2f}s")
+    # --------------------------------------------------------
+    # BUFFER + SAVE
+    # --------------------------------------------------------
     def reset_audio(self):
         if self.original_audio is not None:
             self.current_audio = self.original_audio.copy()
-            vis = self.current_audio.T.mean(axis=0) if self.current_audio.ndim > 1 else self.current_audio
+            vis = (
+                self.current_audio.T.mean(axis=0)
+                if self.current_audio.ndim > 1
+                else self.current_audio
+            )
             self.waveform.set_waveform(vis, self.sr)
-            self.log.append("[MIX] Reset to Original Buffer.")
-
-    def manual_cleanup(self):
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-        os.makedirs(self.temp_dir, exist_ok=True)
-        self.log.append("[SYSTEM] Cache purged.")
+            self.log.append("[MIX] Buffer Purged to Original.")
 
     def save_file(self):
         if self.current_audio is None:
-            self.log.append("[SAFETY] Export blocked: No audio buffer to save.")
+            self.log.append("[SAVE] No buffer to export.")
             return
 
-        # --- UPDATED SAVE AS WITH MP3 OPTION ---
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Master",
+            "Export",
             "",
-            "WAV (*.wav);;MP3 (*.mp3);;FLAC (*.flac)"
+            "WAV (*.wav);;MP3 (*.mp3);;FLAC (*.flac)",
         )
-        if path:
-            try:
-                # soundfile handles wav/flac natively. 
-                # Note: Exporting to MP3 via soundfile requires libsndfile 1.1+
-                sf.write(path, self.current_audio, self.sr)
-                self.log.append(f"[EXPORT] Final master saved: {path}")
-            except Exception as e:
-                self.log.append(f"[ERROR] Export failed: {str(e)}")
+        if not path:
+            return
+
+        try:
+            sf.write(path, self.current_audio, self.sr)
+            self.log.append(f"[SAVE] Exported to {path}")
+        except Exception as e:
+            self.log.append(f"[ERROR] Export failed: {e}")
 
     def closeEvent(self, event):
+        try:
+            if self.stream is not None:
+                self.stream.stop()
+                self.stream.close()
+        except Exception:
+            pass
         shutil.rmtree(self.temp_dir, ignore_errors=True)
         event.accept()
 
-# ============================================================
-# ENTRY POINT
-# ============================================================
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    gui = AiCopilotReverseEngine()
-    gui.show()
+    window = CyberReverseEngine()
+    window.show()
     sys.exit(app.exec())
+
