@@ -632,6 +632,7 @@ class CyberReverseEngine(QWidget):
         try:
             bpm = float(self.bpm_in.text())
             bpm = min(bpm * 2, 999.0)
+            self.bpm_in.setText(f"{bpm:.2f}")
             self.bpm_in.setFixedWidth(60)
             self.refresh_metronome_bpm()
             self.log.append(f"[BPM] Doubled → {bpm:.2f}")
