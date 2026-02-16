@@ -82,23 +82,15 @@ The executable will appear in:
 dist/dre_player/
 📦 Project Structure
 
-digital-reverse-engine/
-
-├── gui_player.py
-
-├── dre_player.spec
-
-├── dre.py
-
-├── core/
-
-│   ├── dsp/
-
-│   ├── hybrid/
-
-│   └── economic/
-
-└── assets/
+- digital-reverse-engine/
+  - gui_player.py
+  - dre_player.spec
+  - dre.py
+  - core/
+    - dsp/
+    - hybrid/
+    - economic/
+  - assets/
 
 
 🧪 Status
