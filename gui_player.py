@@ -353,7 +353,7 @@ class CyberReverseEngine(QWidget):
         self.click_timer = QTimer()
         self.click_timer.timeout.connect(self.play_click)
         t = np.linspace(0, 0.03, int(44100 * 0.03))
-        self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.10).astype(np.float32)
+        self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.1).astype(np.float32)
 
         # Playback timer
         self.play_timer = QTimer()
@@ -396,6 +396,7 @@ class CyberReverseEngine(QWidget):
 
         m_grid.addWidget(QLabel("BPM:"), 0, 0)
         self.bpm_in = QLineEdit("120")
+        self.bpm_in.editingFinished.connect(self.refresh_metronome_bpm)
         m_grid.addWidget(self.bpm_in, 0, 1)
 
         m_grid.addWidget(QLabel("BARS:"), 1, 0)
@@ -492,6 +493,19 @@ class CyberReverseEngine(QWidget):
                 font-size: 8pt;
             }
         """)
+
+    def refresh_metronome_bpm(self):
+        """Refresh metronome interval when BPM changes."""
+        if not self.click_enabled:
+            return  # Only refresh if metronome is ON
+
+        try:
+            bpm = float(self.bpm_in.text())
+            interval = int(60000 / max(bpm, 1.0))
+            self.click_timer.start(interval)
+            self.log.append(f"[METRO] BPM updated → {bpm:.2f}")
+        except Exception:
+            self.log.append("[METRO] Invalid BPM; cannot refresh.")
 
     # --------------------------------------------------------
     # FUNCTIONALITY
