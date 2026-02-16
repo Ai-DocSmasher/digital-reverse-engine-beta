@@ -299,7 +299,7 @@ class TempoWorker(QThread):
                 self.tempo_ready.emit(120.0)
                 return
             onset_env = librosa.onset.onset_strength(y=y.astype(np.float32), sr=self.sr)
-            tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=self.sr, aggregate=None)
+            tempo = librosa.feature.rhythm.tempo( onset_envelope=onset_env, sr=self.sr, aggregate=None )
             if hasattr(tempo, "__len__"):
                 val = float(tempo[0])
             else:
