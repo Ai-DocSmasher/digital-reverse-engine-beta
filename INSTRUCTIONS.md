@@ -12,6 +12,7 @@ It has been renamed to High Fidelity for clarity and consistency.
 
 
 🎚️ 2. Recommended First‑Time Workflow
+
 Step 1 — Import Your Audio
 Click Import Audio and load any WAV/MP3/FLAC file.
 The engine will:
@@ -23,6 +24,7 @@ Detect the BPM (approximate)
 Load album art (if available)
 
 Prepare the buffer for processing
+
 
 Step 2 — Enter the Tempo Manually (Critical for Accuracy)
 For the highest‑quality reverse, manually enter the exact BPM of the track.
@@ -43,6 +45,7 @@ Why this matters:
 High Fidelity mode uses tempo‑aligned slicing.
 Correct BPM = perfect structural reverse.
 
+
 Step 3 — Select “High Fidelity” Mode
 Click High Fidelity to generate the cleanest, most musically accurate reverse.
 
@@ -60,6 +63,7 @@ Produces a studio‑grade reverse
 
 This is the recommended starting point for all new users.
 
+
 Step 4 — Preview the Result
 Use:
 
@@ -72,6 +76,7 @@ Waveform click‑to‑jump
 Sweep indicator for tempo visualization
 
 The engine updates the playhead in real time.
+
 
 Step 5 — Export the Master
 Click Export Master to save the processed audio.
