@@ -89,6 +89,7 @@ Standard Reverse
 Raw waveform reversal — classic, simple, and fast.
 
 🧠 4. Tips for Best Results
+
 ✔ Always enter BPM manually for High Fidelity
 This is the single most important step.
 
