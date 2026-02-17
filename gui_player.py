@@ -379,7 +379,7 @@ class CyberReverseEngine(QWidget):
         self.click_timer = QTimer()
         self.click_timer.timeout.connect(self.play_click)
         t = np.linspace(0, 0.03, int(44100 * 0.03))
-        self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.1).astype(np.float32)
+        self.click_buffer = (np.sin(2 * np.pi * 1000 * t) * 0.3).astype(np.float32)
 
         # Playback timer
         self.play_timer = QTimer()
@@ -695,6 +695,12 @@ class CyberReverseEngine(QWidget):
             f"[COMPUTE] {mode} | BPM={tempo:.2f} | bars={bars}, beats={beats}, tatum={tatum}"
         )
 
+        # --------------------------------------------------------
+        # NEW: Notify user if audio is long (over ~30 seconds)
+        # --------------------------------------------------------
+        if len(self.current_audio) > self.sr * 30:
+            self.log.append("[ENGINE] Processing large audio buffer… please wait.")
+
         self.rev_worker = ReverseWorker(
             self.current_audio, self.sr, mode, tempo, grid_params
         )
@@ -705,16 +711,18 @@ class CyberReverseEngine(QWidget):
         self.current_audio = audio
         vis = audio.T.mean(axis=0) if audio.ndim > 1 else audio
         self.waveform.set_waveform(vis, self.sr)
+
         if mode == "ERROR_FALLBACK":
             self.log.append("[FAIL] DSP pipeline failed, fallback buffer used.")
         else:
             self.log.append(f"[DONE] {mode} Applied.")
-
     # --------------------------------------------------------
     # METRONOME
     # --------------------------------------------------------
     def toggle_metronome(self):
+        """Enable or disable the metronome click."""
         self.click_enabled = not self.click_enabled
+
         if self.click_enabled:
             try:
                 bpm = float(self.bpm_in.text())
@@ -732,12 +740,17 @@ class CyberReverseEngine(QWidget):
             self.log.append("[METRO] OFF")
 
     def play_click(self):
-        sd.play(self.click_buffer, 44100)
+        """Play the metronome click sound (volume = 0.3)."""
+        try:
+            sd.play(self.click_buffer, 44100)
+        except Exception as e:
+            self.log.append(f"[METRO] Click playback error: {e}")
 
     # --------------------------------------------------------
     # PLAYBACK
     # --------------------------------------------------------
     def toggle_play(self):
+        """Start or stop audio playback."""
         # Stop playback
         if self.stream is not None and self.stream.active:
             try:
@@ -778,11 +791,12 @@ class CyberReverseEngine(QWidget):
             self.sweep.set_bpm(bpm)
         except Exception:
             pass
-        self.sweep.timer.start()
 
+        self.sweep.timer.start()
         self.play_btn.setText("Cease Playback")
 
     def audio_callback(self, outdata, frames, time_info, status):
+        """Stream audio to the output device."""
         audio = self.current_audio
         n = len(audio)
 
@@ -813,6 +827,7 @@ class CyberReverseEngine(QWidget):
                 self.play_idx = end
 
     def sync_ui(self):
+        """Update playhead and sweep indicator during playback."""
         if self.stream is not None and not self.stream.active:
             self.play_btn.setText("Initialize Playback")
             self.sweep.timer.stop()
@@ -833,6 +848,7 @@ class CyberReverseEngine(QWidget):
             pass
 
     def snap_to_ms(self, ms):
+        """Jump playback to a specific millisecond position."""
         if self.current_audio is None or self.sr <= 0:
             return
 
