@@ -467,10 +467,12 @@ class CyberReverseEngine(QWidget):
         # BPM modifier buttons
         self.half_btn = CyberButton("½", "#79c0ff")
         self.half_btn.setMinimumHeight(26)
+        self.half_btn.setFixedWidth(40)
         self.half_btn.clicked.connect(self.half_bpm)
 
         self.double_btn = CyberButton("2×", "#79c0ff")
         self.double_btn.setMinimumHeight(26)
+        self.double_btn.setFixedWidth(40)
         self.double_btn.clicked.connect(self.double_bpm)
 
         bpm_container_layout.addWidget(self.bpm_in)
@@ -633,7 +635,6 @@ class CyberReverseEngine(QWidget):
             bpm = float(self.bpm_in.text())
             bpm = min(bpm * 2, 999.0)
             self.bpm_in.setText(f"{bpm:.2f}")
-            self.bpm_in.setFixedWidth(60)
             self.refresh_metronome_bpm()
             self.log.append(f"[BPM] Doubled → {bpm:.2f}")
         except ValueError:
