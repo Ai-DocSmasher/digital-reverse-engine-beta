@@ -10,6 +10,7 @@ Note: In earlier builds, this mode was called HQ_Preset.
 It has been renamed to High Fidelity for clarity and consistency.
 
 
+
 🎚️ 2. Recommended First‑Time Workflow
 Step 1 — Import Your Audio
 Click Import Audio and load any WAV/MP3/FLAC file.
@@ -78,6 +79,7 @@ Click Export Master to save the processed audio.
 The engine writes a clean WAV/MP3 file with no clipping or artifacts.
 
 
+
 🎨 3. Exploring Creative Modes (Optional)
 Once users understand High Fidelity mode, they can explore:
 
@@ -89,6 +91,7 @@ Micro‑grid slicing for glitch, IDM, and granular‑style effects.
 
 Standard Reverse
 Raw waveform reversal — classic, simple, and fast.
+
 
 
 🧠 4. Tips for Best Results
@@ -109,6 +112,7 @@ It’s designed for experimentation.
 Great for glitch, IDM, and sound design.
 
 
+
 📝 5. Changelog Note (Build 3.2)
 HQ_Preset → High Fidelity  
 Renamed for clarity and consistency across UI/UX.
@@ -123,6 +127,7 @@ Updated tempo visualization
 Better album art scaling
 
 Cleaner logging and navigation
+
 
 
 🆘 6. Troubleshooting
