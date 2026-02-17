@@ -99,24 +99,50 @@ Raw waveform reversal — classic, simple, and fast.
 
 
 
-🧠 4. Tips for Best Results
+🧠 4. Tips for Best Results 
 
 ✔ Always enter BPM manually for High Fidelity
-This is the single most important step.
+This is the single most important step for clean, phase‑accurate reversal.
+Manual BPM ensures perfect bar alignment and prevents micro‑drift.
 
 ✔ Use integer BPM values for most EDM/Pop
-Most tracks are exactly 120, 128, 140, etc.
+Most commercial tracks are exactly 120, 128, 130, 140, etc.
+Rounding to the nearest whole BPM gives the most stable results.
 
 ✔ For live recordings, round to the nearest whole BPM
-High Fidelity is tolerant to ±0.5 BPM drift.
+High Fidelity mode tolerates ±0.5 BPM drift without introducing artifacts.
+If the tempo fluctuates, choose the closest stable BPM.
 
 ✔ Use Studio Shuffle for rhythmic creativity
-It’s designed for experimentation.
+This mode is designed for pattern‑level experimentation, DJ‑style rearrangements,
+and non‑destructive rhythmic play.
 
 ✔ Use Tatum Logic for micro‑slicing
-Great for glitch, IDM, and sound design.
+Ideal for glitch, IDM, sound design, and granular‑style transformations.
+It excels at micro‑timing and sub‑beat slicing.
+
+⭐ NB Notes (Important)
+— Large audio files require more processing time
+Tracks longer than 30 seconds may trigger a noticeable delay during processing.
+The engine will display:
 
 
+[ENGINE] Processing large audio buffer… please wait.
+This is normal — High Fidelity and Studio modes analyze the full waveform
+to maintain timing accuracy.
+
+— “Clear Buffer” also deletes temporary files
+When you press Clear Buffer, the engine:
+
+resets the active audio buffer
+
+clears waveform visualization
+
+deletes all temporary files created during processing
+
+resets playback and metronome state
+
+This prevents disk clutter and ensures each session starts clean.
 
 📝 5. Changelog Note (Build 3.2)
 HQ_Preset → High Fidelity  
