@@ -1,5 +1,6 @@
 ⭐ INSTRUCTIONS.md — Digital Reverse Engine™ (Build 3.2)
 First‑Time User Guide & High‑Fidelity Workflow
+
 🎛️ 1. Introduction
 Welcome to the Digital Reverse Engine™, a tempo‑aware, reversible audio engine designed for musicians, producers, sound designers, and AI audio researchers.
 
